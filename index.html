@@ -1,0 +1,253 @@
+<?php
+session_start();
+
+// Check for account deletion success message
+$deleteSuccess = isset($_GET['deleted']) && $_GET['deleted'] == 1;
+
+// If user is already logged in, redirect to dashboard
+if (isset($_SESSION['user_id'])) {
+    header("Location: pages/dashboard.php");
+    exit();
+}
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carbon Footprint Analyzer - Track Your Environmental Impact</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link href="assets/css/custom.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
+        <div class="container">
+            <a class="navbar-brand text-success" href="index.php">
+                <i class="bi bi-leaf"></i> <strong>Carbon Analyzer</strong>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#features">Features</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#about">About</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="pages/login.php">Login</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="btn btn-success ms-2" href="pages/register.php">Get Started</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Delete Success Alert -->
+    <?php if ($deleteSuccess): ?>
+        <div class="container mt-3">
+            <div class="alert alert-success alert-dismissible fade show">
+                <i class="bi bi-check-circle"></i> 
+                Your account has been successfully deleted. Thank you for using our service.
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        </div>
+    <?php endif; ?>
+    
+    <!-- Hero Section -->
+    <section class="py-5 bg-light">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-6">
+                    <h1 class="display-4 fw-bold text-success mb-4">
+                        Track Your Carbon Footprint
+                    </h1>
+                    <p class="lead mb-4">
+                        Monitor, analyze, and reduce your environmental impact with our 
+                        comprehensive carbon footprint tracking system.
+                    </p>
+                    <div class="d-grid gap-2 d-md-flex">
+                        <a href="pages/register.php" class="btn btn-success btn-lg px-4 me-md-2">
+                            <i class="bi bi-person-plus"></i> Get Started Free
+                        </a>
+                        <a href="pages/login.php" class="btn btn-outline-success btn-lg px-4">
+                            <i class="bi bi-box-arrow-in-right"></i> Sign In
+                        </a>
+                    </div>
+                </div>
+                <div class="col-lg-6 text-center">
+                    <i class="bi bi-globe-asia-australia text-success" style="font-size: 15rem; opacity: 0.2;"></i>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Features Section -->
+    <section id="features" class="py-5">
+        <div class="container">
+            <div class="text-center mb-5">
+                <h2 class="fw-bold">Key Features</h2>
+                <p class="text-muted">Everything you need to manage your carbon footprint</p>
+            </div>
+            
+            <div class="row g-4">
+                <div class="col-md-6 col-lg-3">
+                    <div class="card h-100 border-0 shadow-sm text-center p-4">
+                        <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mx-auto mb-3"
+                             style="width: 80px; height: 80px;">
+                            <i class="bi bi-calculator text-success fs-2"></i>
+                        </div>
+                        <h5>Easy Tracking</h5>
+                        <p class="text-muted small mb-0">
+                            Simple data entry for electricity, fuel, water, waste, and more
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="col-md-6 col-lg-3">
+                    <div class="card h-100 border-0 shadow-sm text-center p-4">
+                        <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mx-auto mb-3"
+                             style="width: 80px; height: 80px;">
+                            <i class="bi bi-graph-up text-success fs-2"></i>
+                        </div>
+                        <h5>Visual Analytics</h5>
+                        <p class="text-muted small mb-0">
+                            Interactive charts and graphs to understand your trends
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="col-md-6 col-lg-3">
+                    <div class="card h-100 border-0 shadow-sm text-center p-4">
+                        <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mx-auto mb-3"
+                             style="width: 80px; height: 80px;">
+                            <i class="bi bi-lightbulb text-success fs-2"></i>
+                        </div>
+                        <h5>Personalized Tips</h5>
+                        <p class="text-muted small mb-0">
+                            Get customized recommendations to reduce your emissions
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="col-md-6 col-lg-3">
+                    <div class="card h-100 border-0 shadow-sm text-center p-4">
+                        <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mx-auto mb-3"
+                             style="width: 80px; height: 80px;">
+                            <i class="bi bi-file-pdf text-success fs-2"></i>
+                        </div>
+                        <h5>PDF Reports</h5>
+                        <p class="text-muted small mb-0">
+                            Generate detailed reports to share and track progress
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Stats Section -->
+    <section class="py-5 bg-success text-white">
+        <div class="container">
+            <div class="row text-center">
+                <div class="col-md-4 mb-4 mb-md-0">
+                    <h2 class="display-4 fw-bold">100+</h2>
+                    <p class="mb-0">Active Users</p>
+                </div>
+                <div class="col-md-4 mb-4 mb-md-0">
+                    <h2 class="display-4 fw-bold">500+</h2>
+                    <p class="mb-0">Records Tracked</p>
+                </div>
+                <div class="col-md-4">
+                    <h2 class="display-4 fw-bold">20%</h2>
+                    <p class="mb-0">Average Reduction</p>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- About Section -->
+    <section id="about" class="py-5">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-6 mb-4 mb-lg-0">
+                    <h2 class="fw-bold mb-4">About Carbon Footprint Analyzer</h2>
+                    <p>
+                        Our platform helps organizations and individuals track, analyze, and reduce 
+                        their carbon emissions. Built specifically for Bintulu Port staff, we provide 
+                        comprehensive tools to monitor daily activities and their environmental impact.
+                    </p>
+                    <p>
+                        By understanding your carbon footprint, you can make informed decisions and 
+                        contribute to a more sustainable future.
+                    </p>
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <i class="bi bi-check-circle-fill text-success me-2"></i>
+                            Accurate emission calculations
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-check-circle-fill text-success me-2"></i>
+                            Real-time progress tracking
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-check-circle-fill text-success me-2"></i>
+                            Educational resources
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-check-circle-fill text-success me-2"></i>
+                            Professional reporting
+                        </li>
+                    </ul>
+                </div>
+                <div class="col-lg-6">
+                    <img src="https://via.placeholder.com/600x400/198754/ffffff?text=Carbon+Footprint+Tracking" 
+                         alt="About" class="img-fluid rounded shadow">
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- CTA Section -->
+    <section class="py-5 bg-light">
+        <div class="container text-center">
+            <h2 class="fw-bold mb-4">Ready to Start Tracking?</h2>
+            <p class="lead mb-4">Join us in making a positive impact on the environment</p>
+            <a href="pages/register.php" class="btn btn-success btn-lg">
+                <i class="bi bi-person-plus"></i> Create Free Account
+            </a>
+        </div>
+    </section>
+    
+    <!-- Footer -->
+    <footer class="bg-dark text-white py-4">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5><i class="bi bi-leaf"></i> Carbon Footprint Analyzer</h5>
+                    <p class="small mb-0">
+                        Helping organizations track and reduce their environmental impact.
+                    </p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <p class="small mb-0">
+                        &copy; <?php echo date('Y'); ?> Carbon Footprint Analyzer. All rights reserved.
+                    </p>
+                    <p class="small mb-0">
+                        <a href="#" class="text-white text-decoration-none">Privacy Policy</a> | 
+                        <a href="#" class="text-white text-decoration-none">Terms of Service</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </footer>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
