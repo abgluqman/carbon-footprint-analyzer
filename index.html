@@ -1,15 +1,4 @@
-<?php
-session_start();
 
-// Check for account deletion success message
-$deleteSuccess = isset($_GET['deleted']) && $_GET['deleted'] == 1;
-
-// If user is already logged in, redirect to dashboard
-if (isset($_SESSION['user_id'])) {
-    header("Location: pages/dashboard.php");
-    exit();
-}
-?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
