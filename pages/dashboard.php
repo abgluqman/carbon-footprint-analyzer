@@ -433,11 +433,32 @@ while ($row = $categoryBreakdown->fetch_assoc()) {
         }
         
         if (sidebarToggle) {
-            sidebarToggle.addEventListener('click', function() {
+            sidebarToggle.addEventListener('click', function(e) {
+                e.stopPropagation();
                 sidebar.classList.toggle('collapsed');
                 localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
             });
         }
+        
+        // Close sidebar when clicking/touching outside of it
+        document.addEventListener('click', function(e) {
+            if (sidebar && !sidebar.classList.contains('collapsed')) {
+                if (!sidebar.contains(e.target) && !sidebarToggle.contains(e.target)) {
+                    sidebar.classList.add('collapsed');
+                    localStorage.setItem('sidebarCollapsed', true);
+                }
+            }
+        });
+        
+        // Close sidebar on touch outside
+        document.addEventListener('touchstart', function(e) {
+            if (sidebar && !sidebar.classList.contains('collapsed')) {
+                if (!sidebar.contains(e.target) && !sidebarToggle.contains(e.target)) {
+                    sidebar.classList.add('collapsed');
+                    localStorage.setItem('sidebarCollapsed', true);
+                }
+            }
+        });
         
         initSidebar();
     </script>

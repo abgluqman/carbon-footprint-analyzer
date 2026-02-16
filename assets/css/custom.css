@@ -126,7 +126,7 @@ canvas {
     .sidebar.collapsed {
         transform: translateX(0);
     }
-    
+}
 
 /* Loading Animation */
 .spinner-border-sm {
@@ -142,4 +142,3 @@ footer {
     background-color: white;
     border-top: 1px solid #dee2e6;
 } 
-}
