@@ -500,6 +500,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['change_password'])) {
         // Sidebar Toggle Functionality
         const sidebarToggle = document.getElementById('sidebarToggleBtn');
         const sidebar = document.getElementById('sidebar');
+        let isModalOpen = false;
         
         function initSidebar() {
             const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
@@ -511,29 +512,52 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['change_password'])) {
         if (sidebarToggle) {
             sidebarToggle.addEventListener('click', function(e) {
                 e.stopPropagation();
-                sidebar.classList.toggle('collapsed');
-                localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+                if (!isModalOpen) {
+                    sidebar.classList.toggle('collapsed');
+                    localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+                }
             });
         }
         
-        // Close sidebar when clicking/touching outside of it
-        document.addEventListener('click', function(e) {
+        // Click handler for sidebar outside
+        function handleClick(e) {
+            // Never collapse sidebar if a modal is open
+            if (isModalOpen) return;
+            
             if (sidebar && !sidebar.classList.contains('collapsed')) {
                 if (!sidebar.contains(e.target) && !sidebarToggle.contains(e.target)) {
                     sidebar.classList.add('collapsed');
                     localStorage.setItem('sidebarCollapsed', true);
                 }
             }
-        });
+        }
         
-        // Close sidebar on touch outside
-        document.addEventListener('touchstart', function(e) {
+        // Touch handler for sidebar outside
+        function handleTouch(e) {
+            // Never collapse sidebar if a modal is open
+            if (isModalOpen) return;
+            
             if (sidebar && !sidebar.classList.contains('collapsed')) {
                 if (!sidebar.contains(e.target) && !sidebarToggle.contains(e.target)) {
                     sidebar.classList.add('collapsed');
                     localStorage.setItem('sidebarCollapsed', true);
                 }
             }
+        }
+        
+        // Attach listeners
+        document.addEventListener('click', handleClick);
+        document.addEventListener('touchstart', handleTouch);
+        
+        // Monitor all modals for open/close state
+        const modals = document.querySelectorAll('.modal');
+        modals.forEach(modal => {
+            modal.addEventListener('show.bs.modal', function() {
+                isModalOpen = true;
+            });
+            modal.addEventListener('hidden.bs.modal', function() {
+                isModalOpen = false;
+            });
         });
         
         initSidebar();

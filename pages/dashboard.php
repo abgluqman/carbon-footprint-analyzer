@@ -424,6 +424,8 @@ while ($row = $categoryBreakdown->fetch_assoc()) {
         // Sidebar Toggle Functionality
         const sidebarToggle = document.getElementById('sidebarToggleBtn');
         const sidebar = document.getElementById('sidebar');
+        let isModalOpen = false;
+        let modalOpeningInProgress = false;
         
         function initSidebar() {
             const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
@@ -435,29 +437,70 @@ while ($row = $categoryBreakdown->fetch_assoc()) {
         if (sidebarToggle) {
             sidebarToggle.addEventListener('click', function(e) {
                 e.stopPropagation();
-                sidebar.classList.toggle('collapsed');
-                localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+                e.preventDefault();
+                if (!isModalOpen && !modalOpeningInProgress) {
+                    sidebar.classList.toggle('collapsed');
+                    localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+                }
             });
         }
         
-        // Close sidebar when clicking/touching outside of it
+        // Handle clicks on modal trigger buttons specifically
         document.addEventListener('click', function(e) {
-            if (sidebar && !sidebar.classList.contains('collapsed')) {
-                if (!sidebar.contains(e.target) && !sidebarToggle.contains(e.target)) {
-                    sidebar.classList.add('collapsed');
-                    localStorage.setItem('sidebarCollapsed', true);
-                }
+            const modalTrigger = e.target.closest('[data-bs-toggle="modal"]');
+            if (modalTrigger) {
+                modalOpeningInProgress = true;
+                // Reset flag after modal has time to open
+                setTimeout(() => {
+                    modalOpeningInProgress = false;
+                }, 500);
             }
-        });
+        }, true); // Use capture phase
         
-        // Close sidebar on touch outside
-        document.addEventListener('touchstart', function(e) {
-            if (sidebar && !sidebar.classList.contains('collapsed')) {
-                if (!sidebar.contains(e.target) && !sidebarToggle.contains(e.target)) {
-                    sidebar.classList.add('collapsed');
-                    localStorage.setItem('sidebarCollapsed', true);
+        // Click handler for sidebar collapse (only on main content area)
+        function handleOutsideClick(e) {
+            // NEVER run if modal is open or opening
+            if (isModalOpen || modalOpeningInProgress) return;
+
+            // Only collapse sidebar when clicking on safe areas
+            const isMainContent = e.target.closest('main');
+            const isClickableElement = e.target.closest('button, a, input, select, textarea, .table, .card, .btn, .form-control');
+            
+            // Only proceed if clicking in main content area but NOT on interactive elements
+            if (isMainContent && !isClickableElement) {
+                if (sidebar && !sidebar.classList.contains('collapsed')) {
+                    if (!sidebar.contains(e.target) && !sidebarToggle?.contains(e.target)) {
+                        sidebar.classList.add('collapsed');
+                        localStorage.setItem('sidebarCollapsed', 'true');
+                    }
                 }
             }
+        }
+
+        // Use a delayed event listener to avoid conflicts
+        setTimeout(() => {
+            document.addEventListener('click', handleOutsideClick);
+            document.addEventListener('touchstart', handleOutsideClick);
+        }, 100);
+        
+        // Monitor all modals for open/close state
+        const modals = document.querySelectorAll('.modal');
+        modals.forEach(modal => {
+            modal.addEventListener('show.bs.modal', function() {
+                isModalOpen = true;
+                modalOpeningInProgress = true;
+            });
+            modal.addEventListener('shown.bs.modal', function() {
+                isModalOpen = true;
+                modalOpeningInProgress = false;
+            });
+            modal.addEventListener('hide.bs.modal', function() {
+                // Keep modal flag during hide animation
+            });
+            modal.addEventListener('hidden.bs.modal', function() {
+                isModalOpen = false;
+                modalOpeningInProgress = false;
+            });
         });
         
         initSidebar();

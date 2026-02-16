@@ -45,6 +45,30 @@ body {
     margin-right: 0.5rem;
 }
 
+/* Period Options Nested Styling */
+.sidebar .nav-item.ps-4 .nav-link {
+    padding-left: 1.5rem !important;
+    font-weight: 400;
+    border-left: 3px solid transparent;
+    margin-left: -0.75rem;
+    margin-right: -0.75rem;
+    border-radius: 0;
+}
+
+.sidebar .nav-item.ps-4 .nav-link:hover {
+    background-color: rgba(25, 135, 84, 0.1);
+    border-left-color: var(--primary-green);
+}
+
+.sidebar .nav-item.ps-4 .nav-link.bg-light {
+    background-color: rgba(25, 135, 84, 0.15) !important;
+    border-left-color: var(--primary-green);
+    color: var(--primary-green) !important;
+}
+
+
+
+
 /* Card Enhancements */
 .card {
     transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -53,6 +77,11 @@ body {
 .card:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Prevent modal backdrop from causing repaints */
+.modal-backdrop {
+    will-change: opacity;
 }
 
 /* Chart Containers */

@@ -62,15 +62,40 @@ function getEmissionLevel($totalEmissions) {
     return 'High';
 }
 
-function saveEmissionsRecord($conn, $userId, $emissionsData) {
+function saveEmissionsRecord($conn, $userId, $emissionsData, $period = 'daily', $recordDateTime = null) {
     $totalEmissions = array_sum(array_column($emissionsData, 'emissions'));
-    $recordDate = date('Y-m-d');
+    
+    // Use provided datetime or default to current
+    if ($recordDateTime) {
+        $recordDate = substr($recordDateTime, 0, 10);
+    } else {
+        $recordDate = date('Y-m-d');
+        $recordDateTime = date('Y-m-d H:i:s');
+    }
+    
+    // Ensure recordDateTime is a valid datetime format
+    if (strlen($recordDateTime) == 10) {
+        $recordDateTime = $recordDateTime . ' ' . date('H:i:s');
+    }
+    
+    // Calculate period key based on the date and period type
+    $periodKey = calculatePeriodKey($recordDate, $period);
     
     // Insert emissions record
-    $sql = "INSERT INTO emissions_record (user_id, record_date, total_carbon_emissions) 
-            VALUES (?, ?, ?)";
+    $sql = "INSERT INTO emissions_record (user_id, record_date, total_carbon_emissions, period_type, period_key) 
+            VALUES (?, ?, ?, ?, ?)";
     $stmt = $conn->prepare($sql);
-    $stmt->bind_param("isd", $userId, $recordDate, $totalEmissions);
+    
+    // Check if the columns exist, if not use the old query
+    if ($stmt === false) {
+        $sql = "INSERT INTO emissions_record (user_id, record_date, total_carbon_emissions) 
+                VALUES (?, ?, ?)";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("isd", $userId, $recordDate, $totalEmissions);
+    } else {
+        $stmt->bind_param("issds", $userId, $recordDate, $totalEmissions, $period, $periodKey);
+    }
+    
     $stmt->execute();
     $recordId = $stmt->insert_id;
     
@@ -90,5 +115,26 @@ function saveEmissionsRecord($conn, $userId, $emissionsData) {
     }
     
     return $recordId;
+}
+
+function calculatePeriodKey($date, $period) {
+    $dateTime = new DateTime($date);
+    
+    switch ($period) {
+        case 'weekly':
+            // Get the week number and year
+            $week = $dateTime->format('W');
+            $year = $dateTime->format('Y');
+            return $year . '-W' . $week;
+            
+        case 'monthly':
+            // Get year and month
+            return $dateTime->format('Y-m');
+            
+        case 'daily':
+        default:
+            // Return the date itself for daily
+            return $dateTime->format('Y-m-d');
+    }
 }
 ?>

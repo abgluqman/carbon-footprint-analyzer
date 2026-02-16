@@ -11,9 +11,16 @@ if (!isset($_SESSION['user_id'])) {
 
 $success = '';
 $errors = [];
+$period = isset($_GET['period']) ? $_GET['period'] : 'daily';
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $emissionsData = [];
+    
+    // Get period and date/time info
+    $period = $_POST['period'] ?? 'daily';
+    $recordDate = $_POST['record_date'] ?? date('Y-m-d');
+    $recordTime = $_POST['record_time'] ?? date('H:i');
+    $recordDateTime = $recordDate . ' ' . $recordTime;
     
     // Electricity
     if (!empty($_POST['electricity_kwh'])) {
@@ -79,7 +86,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
     
     if (!empty($emissionsData)) {
-        $recordId = saveEmissionsRecord($conn, $_SESSION['user_id'], $emissionsData);
+        $recordId = saveEmissionsRecord($conn, $_SESSION['user_id'], $emissionsData, $period, $recordDateTime);
         $success = "Emissions calculated and saved successfully!";
         
         // Redirect to dashboard
@@ -129,12 +136,43 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 <div class="card">
                     <div class="card-body">
                         <form method="POST" action="" id="calculatorForm">
-                            <div class="mb-4">
-                                <label for="entry_date" class="form-label">Entry Date</label>
-                                <input type="date" class="form-control" id="entry_date" 
-                                       value="<?php echo date('Y-m-d'); ?>" max="<?php echo date('Y-m-d'); ?>" readonly>
+                            <!-- Period Selection -->
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <label for="period" class="form-label fw-bold">
+                                        <i class="bi bi-calendar3"></i> Calculation Period
+                                    </label>
+                                    <select class="form-select" id="period" name="period" onchange="updatePeriodUI(this.value)">
+                                        <option value="daily" <?php echo $period == 'daily' ? 'selected' : ''; ?>>Daily</option>
+                                        <option value="weekly" <?php echo $period == 'weekly' ? 'selected' : ''; ?>>Weekly</option>
+                                        <option value="monthly" <?php echo $period == 'monthly' ? 'selected' : ''; ?>>Monthly</option>
+                                    </select>
+                                </div>
                             </div>
-                            
+
+                            <!-- Date and Time Selection -->
+                            <div class="row mb-4 pb-4 border-bottom">
+                                <div class="col-md-6">
+                                    <label for="record_date" class="form-label">
+                                        <i class="bi bi-calendar"></i> <?php echo ucfirst($period); ?> Date
+                                    </label>
+                                    <input type="date" class="form-control" id="record_date" name="record_date"
+                                           value="<?php echo isset($_POST['record_date']) ? htmlspecialchars($_POST['record_date']) : date('Y-m-d'); ?>" 
+                                           max="<?php echo date('Y-m-d'); ?>">
+                                    <small class="text-muted d-block mt-1">
+                                        <span id="periodInfo">For daily emissions recorded today</span>
+                                    </small>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="record_time" class="form-label">
+                                        <i class="bi bi-clock"></i> Time (Optional)
+                                    </label>
+                                    <input type="time" class="form-control" id="record_time" name="record_time"
+                                           value="<?php echo isset($_POST['record_time']) ? htmlspecialchars($_POST['record_time']) : date('H:i'); ?>">
+                                    <small class="text-muted d-block mt-1">Use current time if not specified</small>
+                                </div>
+                            </div>
+
                             <div class="row">
                                 <!-- Electricity -->
                                 <div class="col-md-6 mb-3">
@@ -234,9 +272,64 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // Form Validation
+        const calculatorForm = document.getElementById('calculatorForm');
+        
+        if (calculatorForm) {
+            calculatorForm.addEventListener('submit', function(e) {
+                const inputs = [
+                    document.getElementById('electricity_kwh'),
+                    document.getElementById('fuel_liters'),
+                    document.getElementById('water_liters'),
+                    document.getElementById('waste_kg'),
+                    document.getElementById('paper_pages'),
+                    document.getElementById('food_meals')
+                ];
+                
+                const hasValue = inputs.some(input => input && input.value && parseFloat(input.value) > 0);
+                
+                if (!hasValue) {
+                    e.preventDefault();
+                    alert('Please enter at least one consumption value');
+                    return false;
+                }
+            });
+        }
+
+        // Select Period from Sidebar
+        function selectPeriod(period) {
+            const formPeriod = document.getElementById('period');
+            if (formPeriod) {
+                formPeriod.value = period;
+                updatePeriodUI(period);
+            }
+        }
+
+        // Update Period UI
+        function updatePeriodUI(period) {
+            const periodInfo = document.getElementById('periodInfo');
+            const dateLabel = document.querySelector('label[for="record_date"]');
+            
+            const messages = {
+                daily: 'For daily emissions recorded today',
+                weekly: 'For weekly emissions (week containing this date)',
+                monthly: 'For monthly emissions (month containing this date)'
+            };
+            
+            const labels = {
+                daily: '<i class="bi bi-calendar"></i> Daily Date',
+                weekly: '<i class="bi bi-calendar"></i> Week Starting Date',
+                monthly: '<i class="bi bi-calendar"></i> Month Date'
+            };
+            
+            if (periodInfo) periodInfo.textContent = messages[period] || messages.daily;
+            if (dateLabel) dateLabel.innerHTML = labels[period] || labels.daily;
+        }
+
         // Sidebar Toggle Functionality
         const sidebarToggle = document.getElementById('sidebarToggleBtn');
         const sidebar = document.getElementById('sidebar');
+        let isModalOpen = false;
         
         function initSidebar() {
             const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
@@ -248,29 +341,52 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         if (sidebarToggle) {
             sidebarToggle.addEventListener('click', function(e) {
                 e.stopPropagation();
-                sidebar.classList.toggle('collapsed');
-                localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+                if (!isModalOpen) {
+                    sidebar.classList.toggle('collapsed');
+                    localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+                }
             });
         }
         
-        // Close sidebar when clicking/touching outside of it
-        document.addEventListener('click', function(e) {
+        // Click handler for sidebar outside
+        function handleClick(e) {
+            // Never collapse sidebar if a modal is open
+            if (isModalOpen) return;
+            
             if (sidebar && !sidebar.classList.contains('collapsed')) {
                 if (!sidebar.contains(e.target) && !sidebarToggle.contains(e.target)) {
                     sidebar.classList.add('collapsed');
                     localStorage.setItem('sidebarCollapsed', true);
                 }
             }
-        });
+        }
         
-        // Close sidebar on touch outside
-        document.addEventListener('touchstart', function(e) {
+        // Touch handler for sidebar outside
+        function handleTouch(e) {
+            // Never collapse sidebar if a modal is open
+            if (isModalOpen) return;
+            
             if (sidebar && !sidebar.classList.contains('collapsed')) {
                 if (!sidebar.contains(e.target) && !sidebarToggle.contains(e.target)) {
                     sidebar.classList.add('collapsed');
                     localStorage.setItem('sidebarCollapsed', true);
                 }
             }
+        }
+        
+        // Attach listeners
+        document.addEventListener('click', handleClick);
+        document.addEventListener('touchstart', handleTouch);
+        
+        // Monitor all modals for open/close state
+        const modals = document.querySelectorAll('.modal');
+        modals.forEach(modal => {
+            modal.addEventListener('show.bs.modal', function() {
+                isModalOpen = true;
+            });
+            modal.addEventListener('hidden.bs.modal', function() {
+                isModalOpen = false;
+            });
         });
         
         initSidebar();
