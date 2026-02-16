@@ -230,6 +230,26 @@ $records = $stmt->get_result();
                 window.location.href = 'delete_record.php?id=' + recordId;
             }
         }
+
+        // Sidebar Toggle Functionality
+        const sidebarToggle = document.getElementById('sidebarToggleBtn');
+        const sidebar = document.getElementById('sidebar');
+        
+        function initSidebar() {
+            const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+            if (isCollapsed && sidebar) {
+                sidebar.classList.add('collapsed');
+            }
+        }
+        
+        if (sidebarToggle) {
+            sidebarToggle.addEventListener('click', function() {
+                sidebar.classList.toggle('collapsed');
+                localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+            });
+        }
+        
+        initSidebar();
     </script>
 </body>
 </html>

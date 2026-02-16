@@ -272,5 +272,26 @@ $categories = $conn->query("SELECT * FROM emissions_category ORDER BY category_n
     </div>
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Sidebar Toggle Functionality
+        const sidebarToggle = document.getElementById('sidebarToggleBtn');
+        const sidebar = document.getElementById('sidebar');
+        
+        function initSidebar() {
+            const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+            if (isCollapsed && sidebar) {
+                sidebar.classList.add('collapsed');
+            }
+        }
+        
+        if (sidebarToggle) {
+            sidebarToggle.addEventListener('click', function() {
+                sidebar.classList.toggle('collapsed');
+                localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+            });
+        }
+        
+        initSidebar();
+    </script>
 </body>
 </html>

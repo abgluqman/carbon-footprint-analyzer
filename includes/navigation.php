@@ -1,5 +1,8 @@
 <nav class="navbar navbar-expand-lg navbar-dark bg-success">
     <div class="container-fluid">
+        <button id="sidebarToggleBtn" class="btn btn-sm btn-outline-light me-2" style="border: none; padding: 0.5rem 0.75rem;">
+            <i class="bi bi-list"></i>
+        </button>
         <a class="navbar-brand" href="dashboard.php">
             <i class="bi bi-leaf"></i> Carbon Analyzer
         </a>

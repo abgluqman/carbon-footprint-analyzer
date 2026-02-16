@@ -21,6 +21,7 @@ body {
     padding: 0;
     box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
     overflow-y: auto;
+    transition: transform 0.3s ease;
 }
 
 .sidebar .nav-link {
@@ -91,17 +92,41 @@ canvas {
     border-left-color: var(--primary-green);
 }
 
+/* Sidebar collapsed state */
+.sidebar.collapsed {
+    transform: translateX(-100%);
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
+    /* Hide button on desktop */
+    #sidebarToggleBtn {
+        display: inline-block;
+    }
+    
     .sidebar {
-        position: relative;
-        top: 0;
+        position: fixed;
+        top: 56px;
+        width: 250px;
+        left: 0;
     }
     
     main {
         margin-top: 1rem;
     }
 }
+
+@media (min-width: 769px) {
+    /* Hide button on desktop */
+    #sidebarToggleBtn {
+        display: none;
+    }
+    
+    /* Always show sidebar on desktop, even if collapsed class is added */
+    .sidebar.collapsed {
+        transform: translateX(0);
+    }
+    
 
 /* Loading Animation */
 .spinner-border-sm {
@@ -116,4 +141,5 @@ footer {
     padding: 1rem 0;
     background-color: white;
     border-top: 1px solid #dee2e6;
+} 
 }
