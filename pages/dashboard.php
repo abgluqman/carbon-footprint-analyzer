@@ -258,19 +258,15 @@ while ($row = $categoryBreakdown->fetch_assoc()) {
                                                         </td>
                                                         <td>
                                                             <div class="btn-group" role="group">
-                                                                <a href="report.php?id=<?php echo $record['id']; ?>" 
-                                                                   class="btn btn-sm btn-outline-primary">
+                                                                <a href="report.php?id=<?php echo $record['record_id']; ?>" class="btn btn-sm btn-outline-primary">
                                                                     <i class="bi bi-eye"></i> View
                                                                 </a>
-                                                                <a href="report.php?id=<?php echo $record['id']; ?>&download=1" 
-                                                                   class="btn btn-sm btn-outline-success">
+                                                                <a href="report.php?id=<?php echo $record['record_id']; ?>&amp;download=1" class="btn btn-sm btn-outline-success">
                                                                     <i class="bi bi-download"></i> Download
                                                                 </a> 
-                                                                <a href="delete_record.php?id=<?php echo $record['id']; ?>" 
-                                                                   class="btn btn-sm btn-outline-danger" 
-                                                                   onclick="return confirm('Are you sure you want to delete this record?');">
+                                                                <a href="delete_record.php?id=<?php echo $record['record_id']; ?>" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to delete this record?');">
                                                                     <i class="bi bi-trash"></i> Delete
-                                                                <a>
+                                                                </a>
                                                             </div>                                                            
                                                         </td>
                                                     </tr>

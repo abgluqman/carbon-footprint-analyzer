@@ -34,6 +34,12 @@ if ($recordId > 0) {
     }
 }
 
-header("Location: history.php");
+// Redirect back to dashboard or history based on referrer
+$referrer = isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : 'dashboard.php';
+if (strpos($referrer, 'dashboard.php') !== false) {
+    header("Location: dashboard.php");
+} else {
+    header("Location: history.php");
+}
 exit();
 ?>
