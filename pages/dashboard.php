@@ -23,11 +23,20 @@ $personalizedTips = getPersonalizedTips($conn, $userId);
 $comparison = compareWithPreviousMonth($conn, $userId);
 
 // Prepare data for Chart.js
-$trendLabels = [];
-$trendData = [];
+// Build a lookup of month => total from the query results
+$trendFromDb = [];
 while ($row = $monthlyTrend->fetch_assoc()) {
-    $trendLabels[] = date('M Y', strtotime($row['month'] . '-01'));
-    $trendData[] = round($row['total'], 2);
+    $trendFromDb[$row['month']] = round($row['total'], 2);
+}
+
+// Always generate all 6 months so the chart is never empty or uneven
+$trendLabels = [];
+$trendData   = [];
+for ($i = 5; $i >= 0; $i--) {
+    $monthKey      = date('Y-m', strtotime("-$i months"));
+    $monthLabel    = date('M Y', strtotime("-$i months"));
+    $trendLabels[] = $monthLabel;
+    $trendData[]   = $trendFromDb[$monthKey] ?? 0;
 }
 
 $categoryLabels = [];
@@ -48,6 +57,7 @@ while ($row = $categoryBreakdown->fetch_assoc()) {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link href="../assets/css/custom.css" rel="stylesheet">
+    <link href="../assets/css/modal.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
@@ -76,6 +86,9 @@ while ($row = $categoryBreakdown->fetch_assoc()) {
                         <i class="bi bi-check-circle"></i> Your emissions have been calculated and saved successfully!
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
+                    <script>
+                        history.replaceState(null, '', 'dashboard.php');
+                    </script>
                 <?php endif; ?>
                 
                 <!-- Summary Cards -->
@@ -93,11 +106,6 @@ while ($row = $categoryBreakdown->fetch_assoc()) {
                                     <div class="bg-primary bg-opacity-10 p-3 rounded">
                                         <i class="bi bi-cloud text-primary fs-4"></i>
                                     </div>
-                                </div>
-                                <div class="mt-3">
-                                    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#totalEmissionsModal">
-                                        <i class="bi bi-download"></i> Export
-                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -230,7 +238,9 @@ while ($row = $categoryBreakdown->fetch_assoc()) {
                                 <a href="history.php" class="btn btn-sm btn-outline-secondary">View All</a>
                             </div>
                             <div class="card-body">
-                                <?php if ($emissionHistory->num_rows > 0): ?>
+                                <?php 
+                                $dashboardModalHtml = '';
+                                if ($emissionHistory->num_rows > 0): ?>
                                     <div class="table-responsive">
                                         <table class="table table-hover">
                                             <thead>
@@ -248,6 +258,76 @@ while ($row = $categoryBreakdown->fetch_assoc()) {
                                                 while ($record = $emissionHistory->fetch_assoc()): 
                                                     $level = getEmissionLevel($record['total_carbon_emissions']);
                                                     $levelClass = $level == 'Low' ? 'success' : ($level == 'Medium' ? 'warning' : 'danger');
+
+                                                    // Get category breakdown for this record
+                                                    $detailsSql = "SELECT ec.category_name, ed.emissions_value
+                                                            FROM emissions_details ed
+                                                            JOIN emissions_category ec ON ed.category_id = ec.category_id
+                                                            WHERE ed.record_id = ?
+                                                            ORDER BY ed.emissions_value DESC";
+                                                    $detailsStmt = $conn->prepare($detailsSql);
+                                                    $detailsStmt->bind_param("i", $record['record_id']);
+                                                    $detailsStmt->execute();
+                                                    $details = $detailsStmt->get_result();
+
+                                                    // Build modal HTML
+                                                    ob_start();
+                                                    ?>
+                                                    <!-- Details Modal for Record <?php echo $record['record_id']; ?> -->
+                                                    <div class="modal" id="dashDetailsModal<?php echo $record['record_id']; ?>"
+                                                         tabindex="-1"
+                                                         aria-labelledby="dashDetailsModalLabel<?php echo $record['record_id']; ?>"
+                                                         style="z-index: 9999;">
+                                                        <div class="modal-dialog" style="z-index: 10000;">
+                                                            <div class="modal-content">
+                                                                <div class="modal-header">
+                                                                    <h5 class="modal-title" id="dashDetailsModalLabel<?php echo $record['record_id']; ?>">
+                                                                        Emissions Details - <?php echo date('d M Y', strtotime($record['record_date'])); ?>
+                                                                    </h5>
+                                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                                </div>
+                                                                <div class="modal-body">
+                                                                    <div class="mb-3">
+                                                                        <div class="d-flex justify-content-between mb-2">
+                                                                            <strong>Total Emissions:</strong>
+                                                                            <span class="badge bg-<?php echo $levelClass; ?>">
+                                                                                <?php echo number_format($record['total_carbon_emissions'], 2); ?> kg CO₂
+                                                                            </span>
+                                                                        </div>
+                                                                    </div>
+                                                                    <h6 class="mb-3">Breakdown by Category:</h6>
+                                                                    <div class="list-group">
+                                                                        <?php if ($details->num_rows > 0): ?>
+                                                                            <?php while ($detail = $details->fetch_assoc()): ?>
+                                                                                <div class="list-group-item">
+                                                                                    <div class="d-flex justify-content-between align-items-center">
+                                                                                        <span>
+                                                                                            <i class="bi bi-circle-fill text-success" style="font-size: 0.5rem;"></i>
+                                                                                            <?php echo htmlspecialchars($detail['category_name']); ?>
+                                                                                        </span>
+                                                                                        <strong><?php echo number_format($detail['emissions_value'], 2); ?> kg CO₂</strong>
+                                                                                    </div>
+                                                                                </div>
+                                                                            <?php endwhile; ?>
+                                                                        <?php else: ?>
+                                                                            <div class="list-group-item">
+                                                                                <small class="text-muted">No category breakdown available</small>
+                                                                            </div>
+                                                                        <?php endif; ?>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="modal-footer">
+                                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                                                    <a href="report.php?id=<?php echo $record['record_id']; ?>" class="btn btn-primary">
+                                                                        <i class="bi bi-file-pdf"></i> Generate Report
+                                                                    </a>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <?php
+                                                    $dashboardModalHtml .= ob_get_clean();
+                                                    $detailsStmt->close();
                                                 ?>
                                                     <tr>
                                                         <td><?php echo $count++; ?></td>
@@ -258,9 +338,11 @@ while ($row = $categoryBreakdown->fetch_assoc()) {
                                                         </td>
                                                         <td>
                                                             <div class="btn-group" role="group">
-                                                                <a href="report.php?id=<?php echo $record['record_id']; ?>" class="btn btn-sm btn-outline-primary">
+                                                                <button type="button" class="btn btn-sm btn-outline-primary view-details-btn"
+                                                                        data-bs-toggle="modal"
+                                                                        data-bs-target="#dashDetailsModal<?php echo $record['record_id']; ?>">
                                                                     <i class="bi bi-eye"></i> View
-                                                                </a>
+                                                                </button>
                                                                 <a href="report.php?id=<?php echo $record['record_id']; ?>&amp;download=1" class="btn btn-sm btn-outline-success">
                                                                     <i class="bi bi-download"></i> Download
                                                                 </a> 
@@ -296,19 +378,27 @@ while ($row = $categoryBreakdown->fetch_assoc()) {
                                 </h5>
                             </div>
                             <div class="card-body">
-                                <?php if ($personalizedTips->num_rows > 0): ?>
+                                <?php if (!empty($personalizedTips)): ?>
                                     <div class="list-group list-group-flush">
-                                        <?php while ($tip = $personalizedTips->fetch_assoc()): ?>
+                                        <?php foreach ($personalizedTips as $tip): ?>
                                             <div class="list-group-item border-0 px-0">
-                                                <div class="d-flex w-100 justify-content-between">
-                                                    <h6 class="mb-1"><?php echo htmlspecialchars($tip['title']); ?></h6>
+                                                <div class="d-flex w-100 justify-content-between align-items-start">
+                                                    <div>
+                                                        <?php if (!empty($tip['category_name'])): ?>
+                                                            <span class="badge bg-success bg-opacity-10 text-success mb-1" style="font-size:0.7rem;">
+                                                                <i class="bi bi-tag-fill"></i>
+                                                                <?php echo htmlspecialchars($tip['category_name']); ?>
+                                                            </span><br>
+                                                        <?php endif; ?>
+                                                        <h6 class="mb-1"><?php echo htmlspecialchars($tip['title']); ?></h6>
+                                                    </div>
                                                     <small><i class="bi bi-lightbulb-fill text-warning"></i></small>
                                                 </div>
                                                 <p class="mb-1 small text-muted">
-                                                    <?php echo htmlspecialchars(substr($tip['description'], 0, 100)) . '...'; ?>
+                                                    <?php echo nl2br(htmlspecialchars($tip['description'])); ?>
                                                 </p>
                                             </div>
-                                        <?php endwhile; ?>
+                                        <?php endforeach; ?>
                                     </div>
                                     <div class="mt-3 text-center">
                                         <a href="tips.php" class="btn btn-sm btn-outline-success">
@@ -329,19 +419,22 @@ while ($row = $categoryBreakdown->fetch_assoc()) {
         </div>
     </div>
     
+    <!-- All Dashboard Detail Modals (Outside Main Content) -->
+    <?php echo $dashboardModalHtml ?? ''; ?>
+    
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         // Emissions Trend Chart
         const trendCtx = document.getElementById('emissionsTrendChart').getContext('2d');
         const trendChart = new Chart(trendCtx, {
-            type: 'line',
+            type: 'bar',
             data: {
                 labels: <?php echo json_encode($trendLabels); ?>,
                 datasets: [{
                     label: 'Total Emissions (kg CO₂)',
                     data: <?php echo json_encode($trendData); ?>,
-                    borderColor: 'rgb(75, 192, 192)',
-                    backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                    borderColor: 'rgb(13, 233, 233)',
+                    backgroundColor: 'rgba(13, 233, 233, 0.93)',
                     tension: 0.4,
                     fill: true
                 }]
@@ -500,6 +593,66 @@ while ($row = $categoryBreakdown->fetch_assoc()) {
         });
         
         initSidebar();
+
+        // MANUAL MODAL CONTROL - same as history.php
+        document.addEventListener('DOMContentLoaded', function() {
+            // Clean up any stuck modal states on load
+            const backdrops = document.querySelectorAll('.modal-backdrop');
+            if (backdrops.length > 0 && !document.querySelector('.modal.show')) {
+                document.body.classList.remove('modal-open');
+                backdrops.forEach(el => el.remove());
+            }
+
+            let isModalOpening = false;
+            let currentOpenModal = null;
+
+            const modalTriggers = document.querySelectorAll('[data-bs-toggle="modal"]');
+
+            modalTriggers.forEach(function(trigger) {
+                trigger.removeAttribute('data-bs-toggle');
+
+                const targetId = trigger.getAttribute('data-bs-target');
+                const targetModal = document.querySelector(targetId);
+
+                if (targetModal) {
+                    targetModal.setAttribute('aria-hidden', 'true');
+
+                    const modalInstance = new bootstrap.Modal(targetModal, {
+                        backdrop: true,
+                        keyboard: true,
+                        focus: true
+                    });
+
+                    trigger.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        e.stopImmediatePropagation();
+
+                        if (isModalOpening) return;
+
+                        if (currentOpenModal && currentOpenModal !== modalInstance) {
+                            currentOpenModal.hide();
+                        }
+
+                        isModalOpening = true;
+                        modalInstance.show();
+                        currentOpenModal = modalInstance;
+
+                        setTimeout(function() { isModalOpening = false; }, 500);
+                    }, { capture: true });
+
+                    targetModal.addEventListener('shown.bs.modal', function() {
+                        isModalOpening = false;
+                        targetModal.setAttribute('aria-hidden', 'false');
+                    });
+
+                    targetModal.addEventListener('hidden.bs.modal', function() {
+                        targetModal.setAttribute('aria-hidden', 'true');
+                        currentOpenModal = null;
+                    });
+                }
+            });
+        });
     </script>
 </body>
 </html>

@@ -23,12 +23,27 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $imageData = null;
     if (isset($_FILES['content_image']) && $_FILES['content_image']['error'] == 0) {
         $allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
-        $maxSize = 5 * 1024 * 1024; // 5MB
-        
+
+        // Determine safe max size based on MySQL server's max_allowed_packet
+        $mysqlMax = null;
+        $res = $conn->query("SHOW VARIABLES LIKE 'max_allowed_packet'");
+        if ($res) {
+            $row = $res->fetch_assoc();
+            $mysqlMax = isset($row['Value']) ? intval($row['Value']) : null;
+        }
+
+        // Default to 5MB but cap to mysqlMax-1KB if available
+        $defaultMax = 5 * 1024 * 1024; // 5MB
+        if ($mysqlMax && $mysqlMax > 2048) {
+            $maxSize = min($defaultMax, max(1024, $mysqlMax - 1024));
+        } else {
+            $maxSize = $defaultMax;
+        }
+
         if (!in_array($_FILES['content_image']['type'], $allowedTypes)) {
             $errors[] = "Only JPG, PNG, and GIF images are allowed";
         } elseif ($_FILES['content_image']['size'] > $maxSize) {
-            $errors[] = "Image size must be less than 5MB";
+            $errors[] = "Image is too large. Maximum allowed by server: " . round($maxSize / 1024) . " KB. Please resize before uploading.";
         } else {
             $imageData = file_get_contents($_FILES['content_image']['tmp_name']);
         }

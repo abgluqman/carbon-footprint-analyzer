@@ -47,66 +47,7 @@ $records = $stmt->get_result();
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link href="../assets/css/custom.css" rel="stylesheet">
-    <style>
-        /* AGGRESSIVE MODAL FIX - Force stability */
-        .modal {
-            pointer-events: auto !important;
-            transition: none !important; /* Remove ALL transitions */
-            animation: none !important; /* Remove ALL animations */
-        }
-        
-        .modal.show {
-            display: block !important;
-            opacity: 1 !important;
-            visibility: visible !important;
-            position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
-            width: 100% !important;
-            height: 100% !important;
-            overflow: auto !important;
-        }
-        
-        .modal-backdrop {
-            z-index: 9998 !important;
-            transition: none !important;
-            animation: none !important;
-        }
-        
-        .modal-backdrop.show {
-            opacity: 0.5 !important;
-        }
-        
-        .modal-dialog {
-            pointer-events: auto !important;
-            position: relative !important;
-            margin: 1.75rem auto !important;
-            transition: none !important;
-            animation: none !important;
-        }
-        
-        .modal-content {
-            position: relative !important;
-            transition: none !important;
-            animation: none !important;
-        }
-        
-        /* Prevent table hover from interfering */
-        .table-hover tbody tr:hover {
-            cursor: pointer;
-        }
-        
-        /* Ensure modal buttons work */
-        .modal button, .modal a {
-            pointer-events: auto !important;
-        }
-        
-        /* Prevent any transforms or opacity changes */
-        .modal * {
-            transition: none !important;
-            animation: none !important;
-        }
-    </style>
+    <link href="../assets/css/modal.css" rel="stylesheet">
 </head>
 <body>
     <?php include '../includes/navigation.php'; ?>

@@ -65,7 +65,7 @@ function getMonthlyEmissionsTrend($conn, $userId, $months = 6) {
                 SUM(total_carbon_emissions) as total
             FROM emissions_record
             WHERE user_id = ? 
-            AND record_date >= DATE_SUB(CURDATE(), INTERVAL ? MONTH)
+            AND record_date >= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL ? MONTH), '%Y-%m-01')
             GROUP BY DATE_FORMAT(record_date, '%Y-%m')
             ORDER BY month ASC";
     $stmt = $conn->prepare($sql);
@@ -92,40 +92,75 @@ function getCategoryBreakdown($conn, $userId) {
 }
 
 function getPersonalizedTips($conn, $userId) {
-    // Get user's highest emission category
+    // Helper: fetch general tips as a plain array (fallback)
+    $getGeneralTips = function() use ($conn) {
+        $stmt = $conn->prepare(
+            "SELECT title, description, content_type, NULL as category_name
+             FROM educational_content
+             WHERE content_type = 'tip'
+             ORDER BY created_at DESC
+             LIMIT 3"
+        );
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $tips = [];
+        while ($row = $result->fetch_assoc()) {
+            $tips[] = $row;
+        }
+        return $tips;
+    };
+
+    // Get ALL categories the user has emissions in, ordered by highest total first
     $sql = "SELECT ec.category_id, ec.category_name, SUM(ed.emissions_value) as total
             FROM emissions_details ed
             JOIN emissions_record er ON ed.record_id = er.record_id
             JOIN emissions_category ec ON ed.category_id = ec.category_id
             WHERE er.user_id = ?
             GROUP BY ec.category_id
-            ORDER BY total DESC
-            LIMIT 1";
+            ORDER BY total DESC";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("i", $userId);
     $stmt->execute();
-    $result = $stmt->get_result();
-    $highestCategory = $result->fetch_assoc();
-    
-    if (!$highestCategory) {
-        return [];
+    $userCategories = $stmt->get_result();
+
+    if ($userCategories->num_rows === 0) {
+        // User has no emissions yet - return general tips as fallback
+        return $getGeneralTips();
     }
-    
-    // Get latest emission level
+
+    // Get the user's current emission level
     $level = getLatestEmissionLevel($conn, $userId);
-    
-    // Fetch personalized tips
-    $sql = "SELECT title, description, content_type 
-            FROM educational_content 
-            WHERE (category_id = ? OR category_id IS NULL)
-            AND (emissions_level = ? OR emissions_level IS NULL)
-            AND content_type = 'tip'
-            ORDER BY created_at DESC 
-            LIMIT 3";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("is", $highestCategory['category_id'], $level);
-    $stmt->execute();
-    return $stmt->get_result();
+
+    // For each of the user's categories (highest first), fetch one matching tip
+    $tips = [];
+    while ($category = $userCategories->fetch_assoc()) {
+        $sql = "SELECT title, description, content_type, ? as category_name
+                FROM educational_content
+                WHERE category_id = ?
+                AND (emissions_level = ? OR emissions_level IS NULL)
+                AND content_type = 'tip'
+                ORDER BY
+                    CASE WHEN emissions_level = ? THEN 0 ELSE 1 END,
+                    created_at DESC
+                LIMIT 1";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param(
+            "siss",
+            $category['category_name'],
+            $category['category_id'],
+            $level,
+            $level
+        );
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        if ($result->num_rows > 0) {
+            $tips[] = $result->fetch_assoc();
+        }
+    }
+
+    // If no category-specific tips found, fall back to general tips
+    return !empty($tips) ? $tips : $getGeneralTips();
 }
 
 function compareWithPreviousMonth($conn, $userId) {

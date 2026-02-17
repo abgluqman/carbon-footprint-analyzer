@@ -1,0 +1,64 @@
+/* ============================================================
+   modal.css — Shared modal stability fix
+   Include this on any page that uses Bootstrap modals
+   ============================================================ */
+
+/* Remove all transitions/animations to prevent flickering */
+.modal {
+    pointer-events: auto !important;
+    transition: none !important;
+    animation: none !important;
+}
+
+.modal.show {
+    display: block !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    overflow: auto !important;
+}
+
+.modal-backdrop {
+    z-index: 9998 !important;
+    transition: none !important;
+    animation: none !important;
+}
+
+.modal-backdrop.show {
+    opacity: 0.5 !important;
+}
+
+.modal-dialog {
+    pointer-events: auto !important;
+    position: relative !important;
+    margin: 1.75rem auto !important;
+    transition: none !important;
+    animation: none !important;
+}
+
+.modal-content {
+    position: relative !important;
+    transition: none !important;
+    animation: none !important;
+}
+
+/* Ensure all elements inside modal remain interactive */
+.modal button,
+.modal a {
+    pointer-events: auto !important;
+}
+
+/* Suppress any inherited transitions on modal children */
+.modal * {
+    transition: none !important;
+    animation: none !important;
+}
+
+/* Table row cursor when rows are clickable */
+.table-hover tbody tr:hover {
+    cursor: pointer;
+}

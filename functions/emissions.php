@@ -82,19 +82,10 @@ function saveEmissionsRecord($conn, $userId, $emissionsData, $period = 'daily', 
     $periodKey = calculatePeriodKey($recordDate, $period);
     
     // Insert emissions record
-    $sql = "INSERT INTO emissions_record (user_id, record_date, total_carbon_emissions, period_type, period_key) 
-            VALUES (?, ?, ?, ?, ?)";
+    $sql = "INSERT INTO emissions_record (user_id, record_date, total_carbon_emissions) 
+            VALUES (?, ?, ?)";
     $stmt = $conn->prepare($sql);
-    
-    // Check if the columns exist, if not use the old query
-    if ($stmt === false) {
-        $sql = "INSERT INTO emissions_record (user_id, record_date, total_carbon_emissions) 
-                VALUES (?, ?, ?)";
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param("isd", $userId, $recordDate, $totalEmissions);
-    } else {
-        $stmt->bind_param("issds", $userId, $recordDate, $totalEmissions, $period, $periodKey);
-    }
+    $stmt->bind_param("isd", $userId, $recordDate, $totalEmissions);
     
     $stmt->execute();
     $recordId = $stmt->insert_id;
