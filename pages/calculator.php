@@ -163,14 +163,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                         <span id="periodInfo">For daily emissions recorded today</span>
                                     </small>
                                 </div>
-                                <div class="col-md-6">
-                                    <label for="record_time" class="form-label">
-                                        <i class="bi bi-clock"></i> Time (Optional)
-                                    </label>
-                                    <input type="time" class="form-control" id="record_time" name="record_time"
-                                           value="<?php echo isset($_POST['record_time']) ? htmlspecialchars($_POST['record_time']) : date('H:i'); ?>">
-                                    <small class="text-muted d-block mt-1">Use current time if not specified</small>
-                                </div>
                             </div>
 
                             <div class="row">

@@ -48,8 +48,9 @@ $users = $conn->query($sql);
 <body>
     <?php include 'includes/navigation.php'; ?>
     
-    <div class="container-fluid py-4">
-        <div class="d-flex justify-content-between align-items-center mb-4">
+    <!-- Main Content -->
+    <main class="container-fluid px-4">
+        <div class="d-flex justify-content-between align-items-center pt-3 pb-2 mb-3 border-bottom">
             <h2><i class="bi bi-people"></i> User Management</h2>
         </div>
         
@@ -154,5 +155,6 @@ $users = $conn->query($sql);
             new bootstrap.Modal(document.getElementById('deleteModal')).show();
         }
     </script>
+    </main>
 </body>
 </html>

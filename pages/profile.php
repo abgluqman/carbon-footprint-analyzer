@@ -244,18 +244,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['change_password'])) {
                                             <i class="bi bi-person"></i> Profile Information
                                         </button>
                                     </li>
-                                    <li class="nav-item" role="presentation">
-                                        <button class="nav-link" id="security-tab" data-bs-toggle="tab" 
-                                                data-bs-target="#security" type="button" role="tab">
-                                            <i class="bi bi-shield-lock"></i> Security
-                                        </button>
-                                    </li>
-                                    <li class="nav-item" role="presentation">
-                                        <button class="nav-link" id="preferences-tab" data-bs-toggle="tab" 
-                                                data-bs-target="#preferences" type="button" role="tab">
-                                            <i class="bi bi-gear"></i> Preferences
-                                        </button>
-                                    </li>
+                                    <!-- Security tab moved into Profile per request -->
+                                    <!-- Preferences tab removed as requested -->
                                 </ul>
                             </div>
                             <div class="card-body">
@@ -308,12 +298,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['change_password'])) {
                                                 <i class="bi bi-save"></i> Save Changes
                                             </button>
                                         </form>
-                                    </div>
-                                    
-                                    <!-- Security Tab -->
-                                    <div class="tab-pane fade" id="security" role="tabpanel">
+
+                                        <hr class="my-4">
                                         <h5 class="mb-3">Change Password</h5>
-                                        <form method="POST">
+                                        <form method="POST" id="changePasswordForm">
                                             <div class="mb-3">
                                                 <label for="current_password" class="form-label">Current Password</label>
                                                 <input type="password" class="form-control" id="current_password" 
@@ -323,7 +311,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['change_password'])) {
                                             <div class="mb-3">
                                                 <label for="new_password" class="form-label">New Password</label>
                                                 <input type="password" class="form-control" id="new_password" 
-                                                       name="new_password" required>
+                                                       name="new_password" minlength="8" required>
                                                 <small class="text-muted">Must be at least 8 characters</small>
                                             </div>
                                             
@@ -337,9 +325,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['change_password'])) {
                                                 <i class="bi bi-key"></i> Change Password
                                             </button>
                                         </form>
-                                        
+
                                         <hr class="my-4">
-                                        
                                         <div class="alert alert-info">
                                             <h6 class="alert-heading">
                                                 <i class="bi bi-info-circle"></i> Password Security Tips
@@ -351,83 +338,26 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['change_password'])) {
                                                 <li>Avoid common words or personal information</li>
                                             </ul>
                                         </div>
-                                    </div>
-                                    
-                                    <!-- Preferences Tab -->
-                                    <div class="tab-pane fade" id="preferences" role="tabpanel">
-                                        <h5 class="mb-3">User Preferences</h5>
-                                        
-                                        <div class="mb-4">
-                                            <h6>Notification Settings</h6>
-                                            <div class="form-check form-switch mb-2">
-                                                <input class="form-check-input" type="checkbox" id="emailNotif" checked>
-                                                <label class="form-check-label" for="emailNotif">
-                                                    Email notifications for weekly summaries
-                                                </label>
-                                            </div>
-                                            <div class="form-check form-switch mb-2">
-                                                <input class="form-check-input" type="checkbox" id="tipsNotif" checked>
-                                                <label class="form-check-label" for="tipsNotif">
-                                                    Receive personalized reduction tips
-                                                </label>
-                                            </div>
-                                            <div class="form-check form-switch">
-                                                <input class="form-check-input" type="checkbox" id="reminderNotif">
-                                                <label class="form-check-label" for="reminderNotif">
-                                                    Remind me to log emissions data
-                                                </label>
-                                            </div>
-                                        </div>
-                                        
-                                        <div class="mb-4">
-                                            <h6>Display Settings</h6>
-                                            <div class="form-check form-switch mb-2">
-                                                <input class="form-check-input" type="checkbox" id="showTrend" checked>
-                                                <label class="form-check-label" for="showTrend">
-                                                    Show trend indicators on dashboard
-                                                </label>
-                                            </div>
-                                            <div class="form-check form-switch">
-                                                <input class="form-check-input" type="checkbox" id="showComparison" checked>
-                                                <label class="form-check-label" for="showComparison">
-                                                    Show comparison with previous month
-                                                </label>
-                                            </div>
-                                        </div>
-                                        
-                                        <div class="mb-4">
-                                            <h6>Data & Privacy</h6>
-                                            <div class="form-check form-switch mb-2">
-                                                <input class="form-check-input" type="checkbox" id="dataSharing">
-                                                <label class="form-check-label" for="dataSharing">
-                                                    Share anonymized data for research
-                                                </label>
-                                            </div>
-                                            <small class="text-muted">
-                                                Help improve carbon reduction strategies by sharing anonymized emission data
-                                            </small>
-                                        </div>
-                                        
-                                        <button type="button" class="btn btn-success" onclick="savePreferences()">
-                                            <i class="bi bi-save"></i> Save Preferences
-                                        </button>
-                                        
+
                                         <hr class="my-4">
-                                        
                                         <div class="bg-danger bg-opacity-10 p-3 rounded">
                                             <h6 class="text-danger">
                                                 <i class="bi bi-exclamation-triangle"></i> Danger Zone
                                             </h6>
                                             <p class="small mb-2">
-                                                Deleting your account will permanently remove all your data, 
+                                                Deleting your account will permanently remove all your data,
                                                 including emission records and reports.
                                             </p>
-                                            <button type="button" class="btn btn-danger btn-sm" 
+                                            <button type="button" class="btn btn-danger btn-sm"
                                                     data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
                                                 <i class="bi bi-trash"></i> Delete Account
                                             </button>
                                         </div>
                                     </div>
+                                    
+                                    <!-- Security tab removed; password form moved into Profile tab -->
+                                    
+                                    <!-- Preferences removed -->
                                 </div>
                             </div>
                         </div>
@@ -492,9 +422,32 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['change_password'])) {
             }
         }
         
-        function savePreferences() {
-            // In production, this would save preferences via AJAX
-            alert('Preferences saved successfully!');
+        // Client-side validation for Change Password form
+        const changePwdForm = document.getElementById('changePasswordForm');
+        if (changePwdForm) {
+            changePwdForm.addEventListener('submit', function(e) {
+                const current = document.getElementById('current_password').value;
+                const newPass = document.getElementById('new_password').value;
+                const confirmPass = document.getElementById('confirm_password').value;
+
+                if (!current) {
+                    alert('Please enter your current password');
+                    e.preventDefault();
+                    return;
+                }
+
+                if (newPass.length < 8) {
+                    alert('New password must be at least 8 characters');
+                    e.preventDefault();
+                    return;
+                }
+
+                if (newPass !== confirmPass) {
+                    alert('New passwords do not match');
+                    e.preventDefault();
+                    return;
+                }
+            });
         }
 
         // Sidebar Toggle Functionality

@@ -111,8 +111,9 @@ $departmentData = $conn->query($sql);
 <body>
     <?php include 'includes/navigation.php'; ?>
     
-    <div class="container-fluid py-4">
-        <div class="d-flex justify-content-between align-items-center mb-4">
+    <!-- Main Content -->
+    <main class="container-fluid px-4">
+        <div class="d-flex justify-content-between align-items-center pt-3 pb-2 mb-3 border-bottom">
             <h2><i class="bi bi-speedometer2"></i> Admin Dashboard</h2>
             <div class="text-muted">
                 <i class="bi bi-calendar"></i> <?php echo date('l, d F Y'); ?>
@@ -471,5 +472,6 @@ $departmentData = $conn->query($sql);
             }
         });
     </script>
+    </main>
 </body>
 </html>
