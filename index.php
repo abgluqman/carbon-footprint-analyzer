@@ -20,36 +20,47 @@ if ($res) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Carbon Footprint Analyzer - Track Your Environmental Impact</title>
+    <title>🌎 Carbon Footprint Analyzer - Track Your Environmental Impact</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link href="assets/css/custom.css" rel="stylesheet">
 </head>
 <body>
-    <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
+    
+    <nav class="navbar navbar-expand-lg navbar-light bg-light shadow-sm">
+        
         <div class="container">
-            <a class="navbar-brand text-success" href="index.php">
-                <i class="bi bi-leaf"></i> <strong>Carbon Analyzer</strong>
+
+            <a class="navbar-brand text-success fw-bold" href="index.php">
+                Carbon Analyzer
             </a>
+
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
+
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
+                <ul class="navbar-nav mx-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="#features">Features</a>
+                        <a class="nav-link" href="index.php">Home</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#about">About</a>
+                        <a class="nav-link" href="#resources">EduLearn</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="pages/login.php">Login</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="btn btn-success ms-2" href="pages/register.php">Get Started</a>
+                        <a class="nav-link" href="#about">About Us</a>
                     </li>
                 </ul>
+                
+
+                <div class="d-flex">
+                    <a href="pages/login.php" class="btn btn-outline-success me-2">
+                        Login
+                    </a>
+                    <a href="pages/register.php" class="btn btn-success">
+                        Sign Up
+                    </a>
+                </div>
             </div>
         </div>
     </nav>
@@ -66,9 +77,10 @@ if ($res) {
                         Monitor, analyze, and reduce your environmental impact with our 
                         comprehensive carbon footprint tracking system.
                     </p>
+                    <h2 class="lead mb-3">Register for free to get full access.</h2>
                     <div class="d-grid gap-2 d-md-flex">
                         <a href="pages/register.php" class="btn btn-success btn-lg px-4 me-md-2">
-                            <i class="bi bi-person-plus"></i> Get Started Free
+                             Calculate Now!
                         </a>
                         <a href="pages/login.php" class="btn btn-outline-success btn-lg px-4">
                             <i class="bi bi-box-arrow-in-right"></i> Sign In
@@ -76,8 +88,11 @@ if ($res) {
                     </div>
                 </div>
                 <div class="col-lg-6 text-center">
-                    <i class="bi bi-globe-asia-australia text-success" style="font-size: 15rem; opacity: 0.2;"></i>
-                </div>
+                    <img src="assets/images/landing-page.png" 
+                         alt="Globe Image Landing Page" 
+                         style="max-width: 100%; height: auto; opacity: 1;">
+                    <!-- CHANGED: opacity 1.4 → 1 (was invalid, fixed to normal) -->
+                    <!-- CHANGED: ../assets → assets (fixed path) -->
             </div>
         </div>
     </section>
@@ -146,12 +161,12 @@ if ($res) {
         </div>
     </section>
 
-    <!-- Educational Resources -->
+    <!-- How Can You Reduce? -->
     <section id="resources" class="py-5 bg-light">
         <div class="container">
             <div class="text-center mb-5">
-                <h2 class="fw-bold">Educational Resources</h2>
-                <p class="text-muted">Latest tips, articles and guides from our team</p>
+                <h2 class="fw-bold">How Can You Reduce?</h2>
+                <p class="text-muted">Get the latest tips, articles and guides! </p>
             </div>
 
             <div class="row g-4">
@@ -160,22 +175,19 @@ if ($res) {
                         <div class="col-md-6 col-lg-3">
                             <div class="card h-100 border-0 shadow-sm">
                                 <?php if (!empty($item['content_image'])): ?>
-                                    <img src="data:image/jpeg;base64,<?php echo base64_encode($item['content_image']); ?>" 
+                                    <img src="data:image/jpeg;base64,<?php echo base64_encode($item['content_image']); ?>"
                                          class="card-img-top" alt="<?php echo htmlspecialchars($item['title']); ?>">
                                 <?php endif; ?>
                                 <div class="card-body">
-                                    <h5 class="card-title"><?php echo htmlspecialchars($item['title']); ?></h5>
+                                    <h6 class="card-title"><?php echo htmlspecialchars($item['title']); ?></h6>
                                     <p class="card-text small text-muted">
-                                        <?php echo htmlspecialchars(substr($item['description'], 0, 140)); ?><?php echo strlen($item['description'])>140 ? '...' : ''; ?>
+                                        <?php echo htmlspecialchars(substr($item['description'], 0, 80)) . '...'; ?>
                                     </p>
-                                                <a href="pages/report.php?content_id=<?php echo $item['content_id']; ?>" 
-                                                    class="stretched-link content-card-link" data-content-id="<?php echo $item['content_id']; ?>"></a>
-                                </div>
-                                <div class="card-footer bg-white border-0 small text-muted">
-                                    <?php echo htmlspecialchars(ucfirst($item['content_type'])); ?>
-                                    <?php if (!empty($item['emissions_level'])): ?>
-                                        &middot; <?php echo htmlspecialchars($item['emissions_level']); ?>
-                                    <?php endif; ?>
+                                    <a href="pages/tips.php" 
+                                       class="content-card-link btn btn-sm btn-outline-success"
+                                       data-content-id="<?php echo htmlspecialchars($item['content_id']); ?>">
+                                        Read More
+                                    </a>
                                 </div>
                             </div>
                         </div>
@@ -210,34 +222,16 @@ if ($res) {
         </div>
     </div>
 
-    <!-- Stats Section -->
-    <section class="py-5 bg-success text-white">
-        <div class="container">
-            <div class="row text-center">
-                <div class="col-md-4 mb-4 mb-md-0">
-                    <h2 class="display-4 fw-bold">100+</h2>
-                    <p class="mb-0">Active Users</p>
-                </div>
-                <div class="col-md-4 mb-4 mb-md-0">
-                    <h2 class="display-4 fw-bold">500+</h2>
-                    <p class="mb-0">Records Tracked</p>
-                </div>
-                <div class="col-md-4">
-                    <h2 class="display-4 fw-bold">20%</h2>
-                    <p class="mb-0">Average Reduction</p>
-                </div>
-            </div>
-        </div>
-    </section>
+    
 
     <!-- About Section -->
     <section id="about" class="py-5">
         <div class="container">
             <div class="row align-items-center">
                 <div class="col-lg-6 mb-4 mb-lg-0">
-                    <h2 class="fw-bold mb-4">About Carbon Footprint Analyzer</h2>
+                    <h2 class="fw-bold mb-4">About Us</h2>
                     <p>
-                        Our platform helps organizations and individuals track, analyze, and reduce 
+                        Our platform helps individuals track, analyze, and reduce 
                         their carbon emissions. Built specifically for Bintulu Port staff, we provide 
                         comprehensive tools to monitor daily activities and their environmental impact.
                     </p>
@@ -256,16 +250,16 @@ if ($res) {
                         </li>
                         <li class="mb-2">
                             <i class="bi bi-check-circle-fill text-success me-2"></i>
-                            Educational resources
+                            Educational content
                         </li>
                         <li class="mb-2">
                             <i class="bi bi-check-circle-fill text-success me-2"></i>
-                            Professional reporting
+                            PDF reporting
                         </li>
                     </ul>
                 </div>
                 <div class="col-lg-6">
-                    <img src="https://via.placeholder.com/600x400/198754/ffffff?text=Carbon+Footprint+Tracking" 
+                    <img src="assets/images/about-image.png" 
                          alt="About" class="img-fluid rounded shadow">
                 </div>
             </div>
@@ -278,7 +272,7 @@ if ($res) {
             <h2 class="fw-bold mb-4">Ready to Start Tracking?</h2>
             <p class="lead mb-4">Join us in making a positive impact on the environment</p>
             <a href="pages/register.php" class="btn btn-success btn-lg">
-                <i class="bi bi-person-plus"></i> Create Free Account
+                Create Account Now!
             </a>
         </div>
     </section>
@@ -290,7 +284,7 @@ if ($res) {
                 <div class="col-md-6">
                     <h5><i class="bi bi-leaf"></i> Carbon Footprint Analyzer</h5>
                     <p class="small mb-0">
-                        Helping organizations track and reduce their environmental impact.
+                        Helping individuals track and reduce their environmental impact.
                     </p>
                 </div>
                 <div class="col-md-6 text-md-end">

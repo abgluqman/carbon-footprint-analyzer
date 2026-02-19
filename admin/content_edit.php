@@ -260,7 +260,7 @@ $categories = $conn->query("SELECT * FROM emissions_category ORDER BY category_n
                 <div class="card border-0 shadow-sm mt-3 bg-danger bg-opacity-10">
                     <div class="card-body">
                         <h5 class="card-title text-danger">
-                            <i class="bi bi-exclamation-triangle"></i> Danger Zone
+                            <i class="bi bi-exclamation-triangle"></i> Are You Sure?
                         </h5>
                         <hr>
                         <p class="small mb-3">
