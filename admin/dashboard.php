@@ -345,7 +345,7 @@ $departmentData = $conn->query($sql);
                 <div class="card border-0 shadow-sm">
                     <div class="card-header bg-white d-flex justify-content-between align-items-center">
                         <h5 class="mb-0"><i class="bi bi-clock-history"></i> Recent Emissions</h5>
-                        <a href="reports.php" class="btn btn-sm btn-outline-secondary">View All</a>
+                        <a href="emissions_records.php" class="btn btn-sm btn-outline-secondary">View All</a>
                     </div>
                     <div class="card-body">
                         <div class="list-group list-group-flush">

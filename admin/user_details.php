@@ -300,7 +300,7 @@ while ($row = $monthlyTrend->fetch_assoc()) {
                                 <th>Date</th>
                                 <th class="text-end">Emissions</th>
                                 <th class="text-center">Level</th>
-                                <th class="text-center">Action</th>
+                                
                             </tr>
                         </thead>
                         <tbody>
@@ -317,12 +317,7 @@ while ($row = $monthlyTrend->fetch_assoc()) {
                                 <td class="text-center">
                                     <span class="badge bg-<?php echo $levelClass; ?>"><?php echo $level; ?></span>
                                 </td>
-                                <td class="text-center">
-                                    <a href="../pages/report.php?id=<?php echo $record['record_id']; ?>" 
-                                       class="btn btn-sm btn-outline-primary" target="_blank">
-                                        <i class="bi bi-file-pdf"></i> Report
-                                    </a>
-                                </td>
+                                
                             </tr>
                             <?php endwhile; ?>
                         </tbody>

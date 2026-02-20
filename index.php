@@ -71,11 +71,10 @@ if ($res) {
             <div class="row align-items-center">
                 <div class="col-lg-6">
                     <h1 class="display-4 fw-bold text-success mb-4">
-                        Track Your Carbon Footprint
+                        Know Your Impact, Lower Your Footprint
                     </h1>
                     <p class="lead mb-4">
-                        Monitor, analyze, and reduce your environmental impact with our 
-                        comprehensive carbon footprint tracking system.
+                        It takes 2 minutes to see how your lifestyle affects the planet. Get a personalized roadmap to go green without the guesswork.
                     </p>
                     <h2 class="lead mb-3">Register for free to get full access.</h2>
                     <div class="d-grid gap-2 d-md-flex">
@@ -232,7 +231,7 @@ if ($res) {
                     <h2 class="fw-bold mb-4">About Us</h2>
                     <p>
                         Our platform helps individuals track, analyze, and reduce 
-                        their carbon emissions. Built specifically for Bintulu Port staff, we provide 
+                        their carbon emissions. We provide 
                         comprehensive tools to monitor daily activities and their environmental impact.
                     </p>
                     <p>

@@ -52,14 +52,21 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <link href="../assets/css/custom.css" rel="stylesheet">
 </head>
 <body class="bg-light">
+    <body style="
+    background-image: url('../assets/images/landing-page.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;"
+    >
     <div class="container">
         <div class="row justify-content-center align-items-center min-vh-100">
             <div class="col-md-6 col-lg-5">
                 <div class="card shadow">
                     <div class="card-body p-5">
                         <div class="text-center mb-4">
-                            <h2 class="text-success">Carbon Analyzer</h2>
-                            <p class="text-muted">Create your account</p>
+                            <h2 class="text-success">Welcome On Board</h2>
+                            <p class="text-muted">Today is a new day. It's your day. You shape it. Register to start make a difference!</p>
                         </div>
                         
                         <?php if (!empty($errors)): ?>
