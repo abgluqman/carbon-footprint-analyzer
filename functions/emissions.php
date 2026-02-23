@@ -2,26 +2,26 @@
 // Emission factors (kg CO2 per unit)
 class EmissionFactors {
     // Electricity: kg CO2 per kWh
-    const ELECTRICITY = 0.85;
+    const ELECTRICITY = 0.67;
     
     // Fuel: kg CO2 per liter
     const PETROL = 2.31;
     const DIESEL = 2.68;
     
     // Water: kg CO2 per liter (treatment and distribution)
-    const WATER = 0.000298;
+    const WATER = 0.00034;
     
     // Waste: kg CO2 per kg
-    const WASTE_RECYCLABLE = 0.21;
-    const WASTE_NON_RECYCLABLE = 0.5;
+    const WASTE_RECYCLABLE = 0.20;
+    const WASTE_NON_RECYCLABLE = 1.20;
     
     // Paper: kg CO2 per page (A4)
-    const PAPER = 0.01;
+    const PAPER = 0.0055;
     
     // Food: kg CO2 per meal
-    const FOOD_MEAT = 7.2;
-    const FOOD_VEGETARIAN = 2.5;
-    const FOOD_VEGAN = 1.5;
+    const FOOD_MEAT = 5.0;
+    const FOOD_VEGETARIAN = 0.38;
+    const FOOD_VEGAN = 0.28;
 }
 
 function calculateElectricityEmissions($kwh) {
@@ -57,8 +57,8 @@ function calculateFoodEmissions($mealType, $count = 1) {
 }
 
 function getEmissionLevel($totalEmissions) {
-    if ($totalEmissions < 50) return 'Low';
-    if ($totalEmissions < 100) return 'Medium';
+    if ($totalEmissions < 200) return 'Low';
+    if ($totalEmissions <= 500) return 'Medium';
     return 'High';
 }
 

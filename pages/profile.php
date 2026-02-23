@@ -244,8 +244,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['change_password'])) {
                                             <i class="bi bi-person"></i> Profile Information
                                         </button>
                                     </li>
-                                    <!-- Security tab moved into Profile per request -->
-                                    <!-- Preferences tab removed as requested -->
+                                  
                                 </ul>
                             </div>
                             <div class="card-body">
@@ -342,7 +341,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['change_password'])) {
                                         <hr class="my-4">
                                         <div class="bg-danger bg-opacity-10 p-3 rounded">
                                             <h6 class="text-danger">
-                                                <i class="bi bi-exclamation-triangle"></i> Danger Zone
+                                                <i class="bi bi-exclamation-triangle"></i> 
                                             </h6>
                                             <p class="small mb-2">
                                                 Deleting your account will permanently remove all your data,

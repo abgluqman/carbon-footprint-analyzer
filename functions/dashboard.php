@@ -137,18 +137,15 @@ function getPersonalizedTips($conn, $userId) {
         $sql = "SELECT title, description, content_type, ? as category_name
                 FROM educational_content
                 WHERE category_id = ?
-                AND (emissions_level = ? OR emissions_level IS NULL)
+                AND emissions_level = ?
                 AND content_type = 'tip'
-                ORDER BY
-                    CASE WHEN emissions_level = ? THEN 0 ELSE 1 END,
-                    created_at DESC
+                ORDER BY created_at DESC
                 LIMIT 1";
         $stmt = $conn->prepare($sql);
         $stmt->bind_param(
-            "siss",
+            "sis",
             $category['category_name'],
             $category['category_id'],
-            $level,
             $level
         );
         $stmt->execute();
@@ -159,7 +156,7 @@ function getPersonalizedTips($conn, $userId) {
         }
     }
 
-    // If no category-specific tips found, fall back to general tips
+    // If no level-specific tips found, fall back to general tips
     return !empty($tips) ? $tips : $getGeneralTips();
 }
 
@@ -197,5 +194,36 @@ function compareWithPreviousMonth($conn, $userId) {
     }
     
     return null;
+}
+
+function getCurrentMonthEmissions($conn, $userId) {
+    $sql = "SELECT COALESCE(SUM(total_carbon_emissions), 0) as total
+            FROM emissions_record
+            WHERE user_id = ?
+            AND MONTH(record_date) = MONTH(CURDATE())
+            AND YEAR(record_date) = YEAR(CURDATE())";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("i", $userId);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    return $result->fetch_assoc()['total'];
+}
+
+function getPreviousMonthEmissions($conn, $userId) {
+    $sql = "SELECT COALESCE(SUM(total_carbon_emissions), 0) as total
+            FROM emissions_record
+            WHERE user_id = ?
+            AND MONTH(record_date) = MONTH(DATE_SUB(CURDATE(), INTERVAL 1 MONTH))
+            AND YEAR(record_date) = YEAR(DATE_SUB(CURDATE(), INTERVAL 1 MONTH))";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("i", $userId);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    return $result->fetch_assoc()['total'];
+}
+
+function getCurrentMonthLevel($conn, $userId) {
+    $currentTotal = getCurrentMonthEmissions($conn, $userId);
+    return getEmissionLevel($currentTotal);
 }
 ?>

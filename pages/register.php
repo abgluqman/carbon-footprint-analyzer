@@ -109,6 +109,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                     <option value="Group Finance">Group Finance</option>
                                     <option value="Group Stakeholder Relations">Group Stakeholder Relations</option>
                                     <option value="Group Maintenance & Reliability">Group Maintenance & Reliability</option>
+                                    <option value="Other">Group Legal Counsel, Compliance & Integrity</option>
                                     <option value="Other">Other</option>
                                 </select>
                             </div>

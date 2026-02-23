@@ -81,8 +81,7 @@ if ($res) {
                         <a href="pages/register.php" class="btn btn-success btn-lg px-4 me-md-2">
                              Calculate Now!
                         </a>
-                        <a href="pages/login.php" class="btn btn-outline-success btn-lg px-4">
-                            <i class="bi bi-box-arrow-in-right"></i> Sign In
+                        
                         </a>
                     </div>
                 </div>
@@ -290,10 +289,7 @@ if ($res) {
                     <p class="small mb-0">
                         &copy; <?php echo date('Y'); ?> Carbon Footprint Analyzer. All rights reserved.
                     </p>
-                    <p class="small mb-0">
-                        <a href="#" class="text-white text-decoration-none">Privacy Policy</a> | 
-                        <a href="#" class="text-white text-decoration-none">Terms of Service</a>
-                    </p>
+                    
                 </div>
             </div>
         </div>

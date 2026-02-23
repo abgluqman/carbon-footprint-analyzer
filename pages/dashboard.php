@@ -14,6 +14,9 @@ $userId = $_SESSION['user_id'];
 
 // Get dashboard data
 $totalEmissions = getUserTotalEmissions($conn, $userId);
+$currentMonthEmissions = getCurrentMonthEmissions($conn, $userId);
+$previousMonthEmissions = getPreviousMonthEmissions($conn, $userId);
+$currentMonthLevel = getCurrentMonthLevel($conn, $userId);
 $emissionLevel = getLatestEmissionLevel($conn, $userId);
 $highestCategory = getHighestEmissionCategory($conn, $userId);
 $emissionHistory = getEmissionHistory($conn, $userId, 5);
@@ -21,6 +24,18 @@ $monthlyTrend = getMonthlyEmissionsTrend($conn, $userId, 6);
 $categoryBreakdown = getCategoryBreakdown($conn, $userId);
 $personalizedTips = getPersonalizedTips($conn, $userId);
 $comparison = compareWithPreviousMonth($conn, $userId);
+
+// Calculate month-over-month change
+$monthChange = 0;
+$monthTrend = 'neutral';
+if ($previousMonthEmissions > 0) {
+    $monthChange = (($currentMonthEmissions - $previousMonthEmissions) / $previousMonthEmissions) * 100;
+    $monthTrend = $monthChange > 0 ? 'up' : 'down';
+}
+
+// Get total records count
+$totalRecordsQuery = $conn->query("SELECT COUNT(*) as total FROM emissions_record WHERE user_id = $userId");
+$totalRecords = $totalRecordsQuery->fetch_assoc()['total'];
 
 // Prepare data for Chart.js
 // Build a lookup of month => total from the query results
@@ -93,57 +108,126 @@ while ($row = $categoryBreakdown->fetch_assoc()) {
                 
                 <!-- Summary Cards -->
                 <div class="row g-3 mb-4">
-                    <!-- Total Emissions Card -->
+                    <!-- Current Month Emissions Card -->
                     <div class="col-md-6 col-lg-3">
                         <div class="card border-0 shadow-sm h-100">
                             <div class="card-body">
                                 <div class="d-flex justify-content-between align-items-start">
-                                    <div>
-                                        <h6 class="text-muted mb-2">Total Emissions</h6>
-                                        <h3 class="mb-0"><?php echo number_format($totalEmissions, 2); ?></h3>
+                                    <div class="flex-grow-1">
+                                        <h6 class="text-muted mb-2">
+                                            <i class="bi bi-calendar-month"></i> This Month
+                                        </h6>
+                                        <h2 class="mb-0"><?php echo number_format($currentMonthEmissions, 1); ?></h2>
                                         <small class="text-muted">kg CO₂</small>
+                                        
+                                        <?php if ($previousMonthEmissions > 0): ?>
+                                            <div class="mt-2">
+                                                <?php if ($monthTrend == 'up'): ?>
+                                                    <small class="text-danger">
+                                                        <i class="bi bi-arrow-up-short"></i>
+                                                        <?php echo abs(round($monthChange, 1)); ?>% vs last month
+                                                    </small>
+                                                <?php elseif ($monthTrend == 'down'): ?>
+                                                    <small class="text-success">
+                                                        <i class="bi bi-arrow-down-short"></i>
+                                                        <?php echo abs(round($monthChange, 1)); ?>% vs last month
+                                                    </small>
+                                                <?php else: ?>
+                                                    <small class="text-muted">
+                                                        <i class="bi bi-dash"></i> No change
+                                                    </small>
+                                                <?php endif; ?>
+                                            </div>
+                                        <?php endif; ?>
                                     </div>
                                     <div class="bg-primary bg-opacity-10 p-3 rounded">
-                                        <i class="bi bi-cloud text-primary fs-4"></i>
+                                        <i class="bi bi-graph-up text-primary fs-4"></i>
                                     </div>
+                                </div>
+                                <div class="mt-3 pt-2 border-top">
+                                    <small class="text-muted">
+                                        All-time: <strong><?php echo number_format($totalEmissions, 1); ?> kg</strong>
+                                    </small>
                                 </div>
                             </div>
                         </div>
                     </div>
                     
-                    <!-- Emissions Level Card -->
+                    <!-- Last Month Emissions Card -->
                     <div class="col-md-6 col-lg-3">
                         <div class="card border-0 shadow-sm h-100">
                             <div class="card-body">
                                 <div class="d-flex justify-content-between align-items-start">
-                                    <div>
-                                        <h6 class="text-muted mb-2">Emissions Level</h6>
-                                        <h3 class="mb-0">
-                                            <?php 
-                                            $levelClass = $emissionLevel == 'Low' ? 'success' : ($emissionLevel == 'Medium' ? 'warning' : 'danger');
-                                            ?>
-                                            <span class="badge bg-<?php echo $levelClass; ?>"><?php echo $emissionLevel; ?></span>
-                                        </h3>
-                                        <small class="text-muted">Current status</small>
+                                    <div class="flex-grow-1">
+                                        <h6 class="text-muted mb-2">
+                                            <i class="bi bi-calendar-check"></i> Last Month
+                                        </h6>
+                                        <h2 class="mb-0"><?php echo number_format($previousMonthEmissions, 1); ?></h2>
+                                        <small class="text-muted">kg CO₂</small>
+                                        
+                                        <?php 
+                                        $prevMonthLevel = getEmissionLevel($previousMonthEmissions);
+                                        $prevLevelClass = $prevMonthLevel == 'Low' ? 'success' : ($prevMonthLevel == 'Medium' ? 'warning' : 'danger');
+                                        ?>
+                                        <div class="mt-2">
+                                            <span class="badge bg-<?php echo $prevLevelClass; ?> bg-opacity-25 text-<?php echo $prevLevelClass; ?>">
+                                                <?php echo $prevMonthLevel; ?> Level
+                                            </span>
+                                        </div>
                                     </div>
-                                    <div class="bg-<?php echo $levelClass; ?> bg-opacity-10 p-3 rounded">
-                                        <i class="bi bi-speedometer2 text-<?php echo $levelClass; ?> fs-4"></i>
+                                    <div class="bg-secondary bg-opacity-10 p-3 rounded">
+                                        <i class="bi bi-calendar3 text-secondary fs-4"></i>
                                     </div>
                                 </div>
-                                <?php if ($comparison): ?>
-                                    <div class="mt-3">
-                                        <small class="text-muted">
-                                            <?php if ($comparison['trend'] == 'up'): ?>
-                                                <i class="bi bi-arrow-up text-danger"></i>
-                                                <span class="text-danger"><?php echo abs(round($comparison['change'], 1)); ?>% increase</span>
+                                <div class="mt-3 pt-2 border-top">
+                                    <small class="text-muted">
+                                        <?php echo date('F Y', strtotime('-1 month')); ?>
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Current Month Level Card -->
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <h6 class="text-muted mb-2">Current Status</h6>
+                                        <?php 
+                                        $currentLevelClass = $currentMonthLevel == 'Low' ? 'success' : ($currentMonthLevel == 'Medium' ? 'warning' : 'danger');
+                                        ?>
+                                        <h2 class="mb-2">
+                                            <span class="badge bg-<?php echo $currentLevelClass; ?>"><?php echo $currentMonthLevel; ?></span>
+                                        </h2>
+                                        <small class="text-muted">Emission level</small>
+                                        
+                                        <div class="mt-2">
+                                            <?php if ($currentMonthLevel == 'Low'): ?>
+                                                <small class="text-success">
+                                                    <i class="bi bi-check-circle"></i> Great job!
+                                                </small>
+                                            <?php elseif ($currentMonthLevel == 'Medium'): ?>
+                                                <small class="text-warning">
+                                                    <i class="bi bi-exclamation-circle"></i> Room for improvement
+                                                </small>
                                             <?php else: ?>
-                                                <i class="bi bi-arrow-down text-success"></i>
-                                                <span class="text-success"><?php echo abs(round($comparison['change'], 1)); ?>% decrease</span>
+                                                <small class="text-danger">
+                                                    <i class="bi bi-x-circle"></i> Needs attention
+                                                </small>
                                             <?php endif; ?>
-                                            from last month
-                                        </small>
+                                        </div>
                                     </div>
-                                <?php endif; ?>
+                                    <div class="bg-<?php echo $currentLevelClass; ?> bg-opacity-10 p-3 rounded">
+                                        <i class="bi bi-speedometer2 text-<?php echo $currentLevelClass; ?> fs-4"></i>
+                                    </div>
+                                </div>
+                                <div class="mt-3 pt-2 border-top">
+                                    <small class="text-muted">
+                                        Based on <?php echo date('F'); ?> data
+                                    </small>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -165,29 +249,6 @@ while ($row = $categoryBreakdown->fetch_assoc()) {
                                 <div class="mt-3">
                                     <a href="#categoryBreakdown" class="btn btn-sm btn-outline-warning">
                                         <i class="bi bi-eye"></i> View Details
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Records Count Card -->
-                    <div class="col-md-6 col-lg-3">
-                        <div class="card border-0 shadow-sm h-100">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div>
-                                        <h6 class="text-muted mb-2">Total Records</h6>
-                                        <h3 class="mb-0"><?php echo $emissionHistory->num_rows; ?></h3>
-                                        <small class="text-muted">Entries logged</small>
-                                    </div>
-                                    <div class="bg-info bg-opacity-10 p-3 rounded">
-                                        <i class="bi bi-journal-text text-info fs-4"></i>
-                                    </div>
-                                </div>
-                                <div class="mt-3">
-                                    <a href="#historySection" class="btn btn-sm btn-outline-info">
-                                        <i class="bi bi-clock-history"></i> View History
                                     </a>
                                 </div>
                             </div>
@@ -234,6 +295,7 @@ while ($row = $categoryBreakdown->fetch_assoc()) {
                             <div class="card-header bg-white d-flex justify-content-between align-items-center">
                                 <h5 class="mb-0">
                                     <i class="bi bi-clock-history"></i> Recent History
+                                    <span class="badge bg-info ms-2"><?php echo $totalRecords; ?> total</span>
                                 </h5>
                                 <a href="history.php" class="btn btn-sm btn-outline-secondary">View All</a>
                             </div>
@@ -427,14 +489,14 @@ while ($row = $categoryBreakdown->fetch_assoc()) {
         // Emissions Trend Chart
         const trendCtx = document.getElementById('emissionsTrendChart').getContext('2d');
         const trendChart = new Chart(trendCtx, {
-            type: 'bar',
+            type: 'line',
             data: {
                 labels: <?php echo json_encode($trendLabels); ?>,
                 datasets: [{
                     label: 'Total Emissions (kg CO₂)',
                     data: <?php echo json_encode($trendData); ?>,
-                    borderColor: 'rgb(13, 233, 233)',
-                    backgroundColor: 'rgba(13, 233, 233, 0.93)',
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.1)',
                     tension: 0.4,
                     fill: true
                 }]
