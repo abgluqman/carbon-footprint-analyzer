@@ -24,6 +24,7 @@ $monthlyTrend = getMonthlyEmissionsTrend($conn, $userId, 6);
 $categoryBreakdown = getCategoryBreakdown($conn, $userId);
 $personalizedTips = getPersonalizedTips($conn, $userId);
 $comparison = compareWithPreviousMonth($conn, $userId);
+$latestRecord = getLatestEmissionRecord($conn, $userId);
 
 // Calculate month-over-month change
 $monthChange = 0;
@@ -85,14 +86,61 @@ while ($row = $categoryBreakdown->fetch_assoc()) {
             
             <!-- Main Content -->
             <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
-                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-                    <h1 class="h2">Dashboard</h1>
-                    <div class="btn-toolbar mb-2 mb-md-0">
-                        <div class="btn-group me-2">
-                            <a href="calculator.php" class="btn btn-sm btn-success">
-                                <i class="bi bi-calculator"></i> New Entry
-                            </a>
+                <!-- Welcome Header -->
+                <div class="py-4">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <p class="text-muted mb-2">
+                                <?php 
+                                // Display current date in full format
+                                echo date('l, F jS Y'); 
+                                ?>
+                            </p>
+                            <h1 class="display-6 fw-normal mb-3">
+                                <?php 
+                                // Dynamic greeting based on current time
+                                $hour = (int)date('H');
+                                if ($hour >= 5 && $hour < 12) {
+                                    echo 'Good morning';
+                                } elseif ($hour >= 12 && $hour < 18) {
+                                    echo 'Good afternoon';
+                                } else {
+                                    echo 'Good evening';
+                                }
+                                ?>
+                            </h1>
                         </div>
+                        <div class="text-end">
+                            <?php 
+                            // Dynamic emoji based on current time
+                            $hour = (int)date('H');
+                            if ($hour >= 5 && $hour < 12) {
+                                // Morning: Sunrise
+                                echo '<span style="font-size: 4rem;">🌅</span>';
+                            } elseif ($hour >= 12 && $hour < 18) {
+                                // Afternoon: Sun
+                                echo '<span style="font-size: 4rem;">☀️</span>';
+                            } elseif ($hour >= 18 && $hour < 21) {
+                                // Evening: Sunset
+                                echo '<span style="font-size: 4rem;">🌇</span>';
+                            } else {
+                                // Night: Moon
+                                echo '<span style="font-size: 4rem;">🌙</span>';
+                            }
+                            ?>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h5 class="fw-normal mb-3">Welcome!</h5>
+                        <p class="text-muted mb-4" style="max-width: 800px;">
+                            We help you understand your personal carbon emissions. 
+                            By input some basic data, you'll gain valuable insights into your impact on climate change. 
+                            Ready to take charge of your environmental impact? Let's explore your carbon footprint together.
+                        </p>
+                        <a href="calculator.php" class="btn btn-success btn-lg px-4">
+                            <i class="bi bi-calculator"></i> Start Calculating
+                        </a>
                     </div>
                 </div>
                 
@@ -194,39 +242,42 @@ while ($row = $categoryBreakdown->fetch_assoc()) {
                             <div class="card-body">
                                 <div class="d-flex justify-content-between align-items-start">
                                     <div class="flex-grow-1">
-                                        <h6 class="text-muted mb-2">Current Status</h6>
-                                        <?php 
-                                        $currentLevelClass = $currentMonthLevel == 'Low' ? 'success' : ($currentMonthLevel == 'Medium' ? 'warning' : 'danger');
-                                        ?>
-                                        <h2 class="mb-2">
-                                            <span class="badge bg-<?php echo $currentLevelClass; ?>"><?php echo $currentMonthLevel; ?></span>
-                                        </h2>
-                                        <small class="text-muted">Emission level</small>
+                                        <h6 class="text-muted mb-2">Latest Entry</h6>
                                         
-                                        <div class="mt-2">
-                                            <?php if ($currentMonthLevel == 'Low'): ?>
-                                                <small class="text-success">
-                                                    <i class="bi bi-check-circle"></i> Great job!
+                                        <?php if ($latestRecord): ?>
+                                            <?php 
+                                            $levelClass = $latestRecord['level'] == 'Low' ? 'success' : ($latestRecord['level'] == 'Medium' ? 'warning' : 'danger');
+                                            ?>
+                                            <h2 class="mb-1"><?php echo number_format($latestRecord['emissions'], 1); ?> kg</h2>
+                                            <small class="text-muted">CO₂ Emissions</small>
+                                            
+                                            <div class="mt-3">
+                                                <div class="d-flex align-items-center gap-2 mb-2">
+                                                    <span class="badge bg-<?php echo $levelClass; ?>">
+                                                        <?php echo $latestRecord['level']; ?>
+                                                    </span>
+                                                    <span class="badge bg-secondary bg-opacity-25 text-dark">
+                                                        <?php echo ucfirst($latestRecord['period']); ?>
+                                                    </span>
+                                                </div>
+                                                <small class="text-muted">
+                                                    <i class="bi bi-calendar-event"></i>
+                                                    <?php echo date('M j, Y', strtotime($latestRecord['date'])); ?>
                                                 </small>
-                                            <?php elseif ($currentMonthLevel == 'Medium'): ?>
-                                                <small class="text-warning">
-                                                    <i class="bi bi-exclamation-circle"></i> Room for improvement
-                                                </small>
-                                            <?php else: ?>
-                                                <small class="text-danger">
-                                                    <i class="bi bi-x-circle"></i> Needs attention
-                                                </small>
-                                            <?php endif; ?>
-                                        </div>
+                                            </div>
+                                        <?php else: ?>
+                                            <p class="text-muted mb-0">No entries yet</p>
+                                            <small class="text-muted">Start calculating your emissions</small>
+                                        <?php endif; ?>
                                     </div>
-                                    <div class="bg-<?php echo $currentLevelClass; ?> bg-opacity-10 p-3 rounded">
-                                        <i class="bi bi-speedometer2 text-<?php echo $currentLevelClass; ?> fs-4"></i>
+                                    <div class="bg-info bg-opacity-10 p-3 rounded">
+                                        <i class="bi bi-activity text-info fs-4"></i>
                                     </div>
                                 </div>
                                 <div class="mt-3 pt-2 border-top">
-                                    <small class="text-muted">
-                                        Based on <?php echo date('F'); ?> data
-                                    </small>
+                                    <a href="calculator.php" class="btn btn-sm btn-outline-success w-100">
+                                        <i class="bi bi-plus-circle"></i> Add New Entry
+                                    </a>
                                 </div>
                             </div>
                         </div>

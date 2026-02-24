@@ -11,17 +11,25 @@ if (isset($_SESSION['user_id'])) {
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $email = mysqli_real_escape_string($conn, trim($_POST['email']));
+    $email = trim($_POST['email']);
     $password = trim($_POST['password']);
     
+    // prepared statement to prevent SQL injection
     $sql = "SELECT user_id, name, email, password, department 
-            FROM user WHERE email = '$email'";
-    $result = $conn->query($sql);
+            FROM user WHERE email = ?";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("s", $email);
+    $stmt->execute();
+    $result = $stmt->get_result();
     
     if ($result->num_rows == 1) {
         $user = $result->fetch_assoc();
         
+        //  Password verification with hashed password
         if (password_verify($password, $user['password'])) {
+            // Regenerate session ID to prevent session fixation
+            session_regenerate_id(true);
+            
             $_SESSION['user_id'] = $user['user_id'];
             $_SESSION['user_name'] = $user['name'];
             $_SESSION['user_email'] = $user['email'];
@@ -47,14 +55,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="../assets/css/custom.css" rel="stylesheet">
 </head>
-<body class="bg-light">
-    <body style="
+<body style="
     background-image: url('../assets/images/landing-page.png');
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
-    background-attachment: fixed;"
-    >
+    background-attachment: fixed;">
     <div class="container">
         <div class="row justify-content-start align-items-center min-vh-100">
             <div class="col-md-5 col-lg-4">
@@ -68,14 +74,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         <?php if (isset($_SESSION['success'])): ?>
                             <div class="alert alert-success">
                                 <?php 
-                                echo $_SESSION['success']; 
+                                echo htmlspecialchars($_SESSION['success']); 
                                 unset($_SESSION['success']);
                                 ?>
                             </div>
                         <?php endif; ?>
                         
                         <?php if ($error): ?>
-                            <div class="alert alert-danger"><?php echo $error; ?></div>
+                            <div class="alert alert-danger"><?php echo htmlspecialchars($error); ?></div>
                         <?php endif; ?>
                         
                         <form method="POST" action="">

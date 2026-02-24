@@ -1,4 +1,48 @@
 <?php
+// Helper functions for emission level detection
+// (These should eventually be in emissions.php)
+
+if (!function_exists('getEmissionLevelAuto')) {
+    function getEmissionLevelAuto($totalEmissions) {
+        // Smart auto-detection based on typical emission ranges
+        if ($totalEmissions <= 0) {
+            return 'Low';
+        }
+        
+        // Daily range: Typically 0-60 kg
+        if ($totalEmissions < 60) {
+            if ($totalEmissions < 10) return 'Low';
+            if ($totalEmissions < 25) return 'Medium';
+            return 'High';
+        }
+        
+        // Weekly range: Typically 60-400 kg
+        if ($totalEmissions < 400) {
+            if ($totalEmissions < 70) return 'Low';
+            if ($totalEmissions < 175) return 'Medium';
+            return 'High';
+        }
+        
+        // Monthly range: Typically 400+ kg
+        if ($totalEmissions < 300) return 'Low';
+        if ($totalEmissions < 750) return 'Medium';
+        return 'High';
+    }
+}
+
+if (!function_exists('detectPeriodFromAmount')) {
+    function detectPeriodFromAmount($totalEmissions) {
+        // Helper function to detect which period based on amount
+        if ($totalEmissions < 60) {
+            return 'daily';
+        } elseif ($totalEmissions < 400) {
+            return 'weekly';
+        } else {
+            return 'monthly';
+        }
+    }
+}
+
 function getUserTotalEmissions($conn, $userId) {
     $sql = "SELECT SUM(total_carbon_emissions) as total 
             FROM emissions_record 
@@ -24,7 +68,8 @@ function getLatestEmissionLevel($conn, $userId) {
     $row = $result->fetch_assoc();
     
     if ($row) {
-        return getEmissionLevel($row['total_carbon_emissions']);
+        // Use smart auto-detection - no database changes needed!
+        return getEmissionLevelAuto($row['total_carbon_emissions']);
     }
     return 'N/A';
 }
@@ -110,30 +155,49 @@ function getPersonalizedTips($conn, $userId) {
         return $tips;
     };
 
-    // Get ALL categories the user has emissions in, ordered by highest total first
-    $sql = "SELECT ec.category_id, ec.category_name, SUM(ed.emissions_value) as total
-            FROM emissions_details ed
-            JOIN emissions_record er ON ed.record_id = er.record_id
-            JOIN emissions_category ec ON ed.category_id = ec.category_id
-            WHERE er.user_id = ?
-            GROUP BY ec.category_id
-            ORDER BY total DESC";
-    $stmt = $conn->prepare($sql);
+    // Get user's LATEST emission record
+    $latestRecordSql = "SELECT record_id 
+                        FROM emissions_record 
+                        WHERE user_id = ? 
+                        ORDER BY record_date DESC 
+                        LIMIT 1";
+    $stmt = $conn->prepare($latestRecordSql);
     $stmt->bind_param("i", $userId);
     $stmt->execute();
-    $userCategories = $stmt->get_result();
+    $latestRecord = $stmt->get_result()->fetch_assoc();
 
-    if ($userCategories->num_rows === 0) {
-        // User has no emissions yet - return general tips as fallback
+    if (!$latestRecord) {
+        // User has no emissions yet - return general tips
         return $getGeneralTips();
     }
 
-    // Get the user's current emission level
-    $level = getLatestEmissionLevel($conn, $userId);
+    // Get categories from the LATEST record, ordered by highest emissions first
+    $sql = "SELECT ec.category_id, ec.category_name, ed.emissions_value
+            FROM emissions_details ed
+            JOIN emissions_category ec ON ed.category_id = ec.category_id
+            WHERE ed.record_id = ?
+            ORDER BY ed.emissions_value DESC";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("i", $latestRecord['record_id']);
+    $stmt->execute();
+    $latestCategories = $stmt->get_result();
 
-    // For each of the user's categories (highest first), fetch one matching tip
+    if ($latestCategories->num_rows === 0) {
+        return $getGeneralTips();
+    }
+
+    // Get the user's current month emission level
+    $currentMonthEmissions = getCurrentMonthEmissions($conn, $userId);
+    $level = getEmissionLevelAuto($currentMonthEmissions);
+    
+    // If current month has no data, use latest record level as fallback
+    if ($currentMonthEmissions == 0) {
+        $level = getLatestEmissionLevel($conn, $userId);
+    }
+
+    // For each category in latest record (highest first), fetch matching tips
     $tips = [];
-    while ($category = $userCategories->fetch_assoc()) {
+    while ($category = $latestCategories->fetch_assoc()) {
         $sql = "SELECT title, description, content_type, ? as category_name
                 FROM educational_content
                 WHERE category_id = ?
@@ -153,6 +217,11 @@ function getPersonalizedTips($conn, $userId) {
 
         if ($result->num_rows > 0) {
             $tips[] = $result->fetch_assoc();
+        }
+        
+        // Stop after getting 3 tips
+        if (count($tips) >= 3) {
+            break;
         }
     }
 
@@ -224,6 +293,34 @@ function getPreviousMonthEmissions($conn, $userId) {
 
 function getCurrentMonthLevel($conn, $userId) {
     $currentTotal = getCurrentMonthEmissions($conn, $userId);
-    return getEmissionLevel($currentTotal);
+    return getEmissionLevel($currentTotal, 'monthly'); // Use monthly thresholds
+}
+
+function getLatestEmissionRecord($conn, $userId) {
+    $sql = "SELECT total_carbon_emissions, record_date 
+            FROM emissions_record 
+            WHERE user_id = ? 
+            ORDER BY record_date DESC 
+            LIMIT 1";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("i", $userId);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $row = $result->fetch_assoc();
+    
+    if ($row) {
+        // Detect period based on emission amount
+        $emissions = $row['total_carbon_emissions'];
+        $period = detectPeriodFromAmount($emissions);
+        
+        return [
+            'emissions' => $emissions,
+            'date' => $row['record_date'],
+            'period' => $period,
+            'level' => getEmissionLevel($emissions, $period)
+        ];
+    }
+    
+    return null;
 }
 ?>

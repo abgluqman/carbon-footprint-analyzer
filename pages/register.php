@@ -3,10 +3,10 @@ session_start();
 require_once '../config/db_connection.php';
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $name = mysqli_real_escape_string($conn, trim($_POST['name']));
-    $email = mysqli_real_escape_string($conn, trim($_POST['email']));
+    $name = trim($_POST['name']);
+    $email = trim($_POST['email']);
     $password = trim($_POST['password']);
-    $department = mysqli_real_escape_string($conn, trim($_POST['department']));
+    $department = trim($_POST['department']);
     
     // Validation
     $errors = [];
@@ -18,20 +18,28 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $errors[] = "Password must be at least 8 characters";
     if (empty($department)) $errors[] = "Department is required";
     
-    // Check if email exists
-    $check_email = "SELECT email FROM user WHERE email = '$email'";
-    $result = $conn->query($check_email);
+    //  Check if email exists using prepared statement
+    $check_email = "SELECT email FROM user WHERE email = ?";
+    $stmt = $conn->prepare($check_email);
+    $stmt->bind_param("s", $email);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
     if ($result->num_rows > 0) {
         $errors[] = "Email already registered";
     }
     
     if (empty($errors)) {
+        //  Hash password
         $hashed_password = password_hash($password, PASSWORD_DEFAULT);
         
+        //  using prepared statement
         $sql = "INSERT INTO user (name, email, password, department) 
-                VALUES ('$name', '$email', '$hashed_password', '$department')";
+                VALUES (?, ?, ?, ?)";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("ssss", $name, $email, $hashed_password, $department);
         
-        if ($conn->query($sql)) {
+        if ($stmt->execute()) {
             $_SESSION['success'] = "Registration successful! Please login.";
             header("Location: login.php");
             exit();
@@ -51,14 +59,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="../assets/css/custom.css" rel="stylesheet">
 </head>
-<body class="bg-light">
-    <body style="
+<body style="
     background-image: url('../assets/images/landing-page.png');
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
-    background-attachment: fixed;"
-    >
+    background-attachment: fixed;">
     <div class="container">
         <div class="row justify-content-center align-items-center min-vh-100">
             <div class="col-md-6 col-lg-5">
@@ -73,7 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                             <div class="alert alert-danger">
                                 <ul class="mb-0">
                                     <?php foreach ($errors as $error): ?>
-                                        <li><?php echo $error; ?></li>
+                                        <li><?php echo htmlspecialchars($error); ?></li>
                                     <?php endforeach; ?>
                                 </ul>
                             </div>
@@ -109,7 +115,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                     <option value="Group Finance">Group Finance</option>
                                     <option value="Group Stakeholder Relations">Group Stakeholder Relations</option>
                                     <option value="Group Maintenance & Reliability">Group Maintenance & Reliability</option>
-                                    <option value="Other">Group Legal Counsel, Compliance & Integrity</option>
+                                    <option value="Group Legal Counsel, Compliance & Integrity">Group Legal Counsel, Compliance & Integrity</option>
                                     <option value="Other">Other</option>
                                 </select>
                             </div>
