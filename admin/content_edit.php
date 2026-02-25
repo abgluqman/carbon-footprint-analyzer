@@ -3,6 +3,11 @@ session_start();
 require_once '../config/db_connection.php';
 require_once 'auth_check.php';
 
+// ✅ SECURITY: Generate CSRF token
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 $contentId = isset($_GET['id']) ? intval($_GET['id']) : 0;
 $errors = [];
 $success = '';
@@ -25,17 +30,40 @@ if (!$content) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    // ✅ SECURITY: Validate CSRF token
+    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+        die('CSRF token validation failed. Please refresh the page and try again.');
+    }
+    
     $title = trim($_POST['title']);
     $description = trim($_POST['description']);
     $contentType = $_POST['content_type'];
-    $emissionsLevel = $_POST['emissions_level'];
+    $emissionsLevel = !empty($_POST['emissions_level']) ? $_POST['emissions_level'] : null;
     $categoryId = !empty($_POST['category_id']) ? intval($_POST['category_id']) : null;
     
     // Validation
     if (empty($title)) $errors[] = "Title is required";
+    if (strlen($title) > 150) $errors[] = "Title must be 150 characters or less";
     if (empty($description)) $errors[] = "Description is required";
     if (empty($contentType)) $errors[] = "Content type is required";
     
+    // ✅ SECURITY: Validate content_type against whitelist
+    $allowedContentTypes = ['tip', 'article', 'video'];
+    if (!in_array($contentType, $allowedContentTypes)) {
+        $errors[] = "Invalid content type";
+    }
+    
+    // ✅ SECURITY: Validate emissions_level against whitelist
+    if ($emissionsLevel !== null) {
+        $allowedLevels = ['Low', 'Medium', 'High'];
+        if (!in_array($emissionsLevel, $allowedLevels)) {
+            $errors[] = "Invalid emissions level";
+        }
+    }
+    
+    // Handle image removal request
+    $removeImage = isset($_POST['remove_image']) && $_POST['remove_image'] == '1';
+
     // Handle image upload
     $updateImage = false;
     $imageData = null;
@@ -58,7 +86,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $maxSize = $defaultMax;
         }
 
-        if (!in_array($_FILES['content_image']['type'], $allowedTypes)) {
+        // ✅ SECURITY: Additional file validation
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mimeType = finfo_file($finfo, $_FILES['content_image']['tmp_name']);
+        // Note: finfo_close() is deprecated in PHP 8.3+, resource is auto-closed
+        
+        $allowedMimes = ['image/jpeg', 'image/png', 'image/gif'];
+
+        if (!in_array($_FILES['content_image']['type'], $allowedTypes) || !in_array($mimeType, $allowedMimes)) {
             $errors[] = "Only JPG, PNG, and GIF images are allowed";
         } elseif ($_FILES['content_image']['size'] > $maxSize) {
             $errors[] = "Image is too large. Maximum allowed by server: " . round($maxSize / 1024) . " KB. Please resize before uploading.";
@@ -70,6 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     
     if (empty($errors)) {
         if ($updateImage) {
+            // New image uploaded — replace existing
             $sql = "UPDATE educational_content 
                     SET category_id = ?, title = ?, description = ?, 
                         content_type = ?, emissions_level = ?, content_image = ?
@@ -77,7 +113,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $stmt = $conn->prepare($sql);
             $stmt->bind_param("isssssi", $categoryId, $title, $description, 
                             $contentType, $emissionsLevel, $imageData, $contentId);
+        } elseif ($removeImage) {
+            // Remove image — set to NULL
+            $sql = "UPDATE educational_content 
+                    SET category_id = ?, title = ?, description = ?, 
+                        content_type = ?, emissions_level = ?, content_image = NULL
+                    WHERE content_id = ?";
+            $stmt = $conn->prepare($sql);
+            $stmt->bind_param("issssi", $categoryId, $title, $description, 
+                            $contentType, $emissionsLevel, $contentId);
         } else {
+            // No image change — keep existing
             $sql = "UPDATE educational_content 
                     SET category_id = ?, title = ?, description = ?, 
                         content_type = ?, emissions_level = ?
@@ -101,7 +147,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 }
 
 // Get categories
-$categories = $conn->query("SELECT * FROM emissions_category ORDER BY category_name");
+$categories = $conn->query("SELECT category_id, category_name FROM emissions_category ORDER BY category_name");
 ?>
 
 <!DOCTYPE html>
@@ -119,7 +165,7 @@ $categories = $conn->query("SELECT * FROM emissions_category ORDER BY category_n
     
     <div class="container-fluid py-4">
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2><i class="bi bi-pencil"></i> Edit Educational Content</h2>
+            <h2><i class="bi bi-pencil-square"></i> Edit Educational Content</h2>
             <a href="content.php" class="btn btn-outline-secondary">
                 <i class="bi bi-arrow-left"></i> Back to List
             </a>
@@ -130,7 +176,8 @@ $categories = $conn->query("SELECT * FROM emissions_category ORDER BY category_n
                 <strong>Error:</strong>
                 <ul class="mb-0">
                     <?php foreach ($errors as $error): ?>
-                        <li><?php echo $error; ?></li>
+                        <!-- ✅ SECURITY: XSS protection -->
+                        <li><?php echo htmlspecialchars($error); ?></li>
                     <?php endforeach; ?>
                 </ul>
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
@@ -139,7 +186,9 @@ $categories = $conn->query("SELECT * FROM emissions_category ORDER BY category_n
         
         <?php if ($success): ?>
             <div class="alert alert-success alert-dismissible fade show">
-                <i class="bi bi-check-circle"></i> <?php echo $success; ?>
+                <!-- ✅ SECURITY: XSS protection -->
+                <i class="bi bi-check-circle"></i> <?php echo htmlspecialchars($success); ?>
+                <a href="content.php" class="alert-link">View all content</a>
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
         <?php endif; ?>
@@ -149,17 +198,21 @@ $categories = $conn->query("SELECT * FROM emissions_category ORDER BY category_n
                 <div class="card border-0 shadow-sm">
                     <div class="card-body">
                         <form method="POST" enctype="multipart/form-data">
+                            <!-- ✅ SECURITY: CSRF token -->
+                            <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
+                            
                             <div class="mb-3">
                                 <label for="title" class="form-label">Title <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" id="title" name="title" 
                                        value="<?php echo htmlspecialchars($content['title']); ?>" 
-                                       placeholder="Enter content title" required>
+                                       placeholder="Enter content title" required maxlength="150">
                             </div>
                             
                             <div class="mb-3">
                                 <label for="description" class="form-label">Description <span class="text-danger">*</span></label>
                                 <textarea class="form-control" id="description" name="description" 
                                           rows="8" placeholder="Enter content description" required><?php echo htmlspecialchars($content['description']); ?></textarea>
+                                <small class="text-muted">Provide detailed information, tips, or guidance</small>
                             </div>
                             
                             <div class="row">
@@ -167,14 +220,14 @@ $categories = $conn->query("SELECT * FROM emissions_category ORDER BY category_n
                                     <label for="content_type" class="form-label">Content Type <span class="text-danger">*</span></label>
                                     <select class="form-select" id="content_type" name="content_type" required>
                                         <option value="">Select Type</option>
-                                        <option value="tip" <?php echo $content['content_type'] == 'tip' ? 'selected' : ''; ?>>
+                                        <option value="tip" <?php echo ($content['content_type'] == 'tip') ? 'selected' : ''; ?>>
                                             Tip
                                         </option>
-                                        <option value="article" <?php echo $content['content_type'] == 'article' ? 'selected' : ''; ?>>
+                                        <option value="article" <?php echo ($content['content_type'] == 'article') ? 'selected' : ''; ?>>
                                             Article
                                         </option>
-                                        <option value="guide" <?php echo $content['content_type'] == 'guide' ? 'selected' : ''; ?>>
-                                            Guide
+                                        <option value="video" <?php echo ($content['content_type'] == 'video') ? 'selected' : ''; ?>>
+                                            Video
                                         </option>
                                     </select>
                                 </div>
@@ -183,16 +236,17 @@ $categories = $conn->query("SELECT * FROM emissions_category ORDER BY category_n
                                     <label for="emissions_level" class="form-label">Emission Level</label>
                                     <select class="form-select" id="emissions_level" name="emissions_level">
                                         <option value="">General (All Levels)</option>
-                                        <option value="Low" <?php echo $content['emissions_level'] == 'Low' ? 'selected' : ''; ?>>
+                                        <option value="Low" <?php echo ($content['emissions_level'] == 'Low') ? 'selected' : ''; ?>>
                                             Low Emitters
                                         </option>
-                                        <option value="Medium" <?php echo $content['emissions_level'] == 'Medium' ? 'selected' : ''; ?>>
+                                        <option value="Medium" <?php echo ($content['emissions_level'] == 'Medium') ? 'selected' : ''; ?>>
                                             Medium Emitters
                                         </option>
-                                        <option value="High" <?php echo $content['emissions_level'] == 'High' ? 'selected' : ''; ?>>
+                                        <option value="High" <?php echo ($content['emissions_level'] == 'High') ? 'selected' : ''; ?>>
                                             High Emitters
                                         </option>
                                     </select>
+                                    <small class="text-muted">Target specific emission levels for personalized tips</small>
                                 </div>
                             </div>
                             
@@ -207,20 +261,58 @@ $categories = $conn->query("SELECT * FROM emissions_category ORDER BY category_n
                                         </option>
                                     <?php endwhile; ?>
                                 </select>
+                                <small class="text-muted">Link to specific emission category or leave as general</small>
                             </div>
                             
                             <div class="mb-4">
-                                <label for="content_image" class="form-label">Image</label>
+                                <label class="form-label">Image (Optional)</label>
+
                                 <?php if ($content['content_image']): ?>
-                                    <div class="mb-2">
-                                        <img src="data:image/jpeg;base64,<?php echo base64_encode($content['content_image']); ?>" 
-                                             class="img-thumbnail" style="max-width: 300px;">
-                                        <p class="small text-muted mt-1">Current image (upload new to replace)</p>
+                                    <?php
+                                        // Detect actual MIME type from binary data
+                                        $finfo    = new finfo(FILEINFO_MIME_TYPE);
+                                        $imgMime  = $finfo->buffer($content['content_image']);
+                                        $allowed  = ['image/jpeg', 'image/png', 'image/gif'];
+                                        $imgMime  = in_array($imgMime, $allowed) ? $imgMime : 'image/jpeg';
+                                        $imgB64   = base64_encode($content['content_image']);
+                                    ?>
+                                    <!-- Current image preview -->
+                                    <div class="mb-3 p-2 border rounded bg-light" id="currentImagePreview">
+                                        <p class="text-muted small mb-2">
+                                            <i class="bi bi-image"></i> Current image:
+                                        </p>
+                                        <img src="data:<?php echo $imgMime; ?>;base64,<?php echo $imgB64; ?>"
+                                             alt="Current content image"
+                                             class="img-fluid rounded"
+                                             style="max-height: 250px; object-fit: contain;">
+                                        <div class="mt-2">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox"
+                                                       name="remove_image" id="remove_image" value="1"
+                                                       onchange="toggleRemoveImage(this)">
+                                                <label class="form-check-label text-danger small" for="remove_image">
+                                                    <i class="bi bi-trash"></i> Remove current image
+                                                </label>
+                                            </div>
+                                        </div>
                                     </div>
                                 <?php endif; ?>
-                                <input type="file" class="form-control" id="content_image" name="content_image" 
-                                       accept="image/jpeg,image/png,image/gif">
+
+                                <label for="content_image" class="form-label small text-muted">
+                                    <?php echo $content['content_image'] ? 'Upload new image to replace:' : 'Upload image:'; ?>
+                                </label>
+                                <input type="file" class="form-control" id="content_image" name="content_image"
+                                       accept="image/jpeg,image/png,image/gif"
+                                       onchange="previewNewImage(this)">
                                 <small class="text-muted">Max size: 5MB. Formats: JPG, PNG, GIF</small>
+
+                                <!-- Preview of newly selected image -->
+                                <div id="newImagePreview" class="mt-2" style="display:none;">
+                                    <p class="text-muted small mb-1"><i class="bi bi-image"></i> New image preview:</p>
+                                    <img id="newImagePreviewImg" src="" alt="New image preview"
+                                         class="img-fluid rounded"
+                                         style="max-height: 200px; object-fit: contain;">
+                                </div>
                             </div>
                             
                             <div class="d-grid gap-2">
@@ -237,63 +329,45 @@ $categories = $conn->query("SELECT * FROM emissions_category ORDER BY category_n
             </div>
             
             <div class="col-lg-4">
-                <div class="card border-0 shadow-sm">
+                <div class="card border-0 shadow-sm bg-light">
                     <div class="card-body">
                         <h5 class="card-title">
-                            <i class="bi bi-info-circle"></i> Content Information
+                            <i class="bi bi-info-circle"></i> Content Guidelines
                         </h5>
                         <hr>
-                        <p class="mb-2">
-                            <strong>Content ID:</strong> <?php echo $content['content_id']; ?>
-                        </p>
-                        <p class="mb-2">
-                            <strong>Created:</strong> 
-                            <?php echo date('d M Y, h:i A', strtotime($content['created_at'])); ?>
-                        </p>
-                        <p class="mb-0">
-                            <strong>Last Updated:</strong> 
-                            <?php echo $success ? 'Just now' : 'N/A'; ?>
-                        </p>
-                    </div>
-                </div>
-                
-                <div class="card border-0 shadow-sm mt-3 bg-danger bg-opacity-10">
-                    <div class="card-body">
-                        <h5 class="card-title text-danger">
-                            <i class="bi bi-exclamation-triangle"></i> Are You Sure?
-                        </h5>
+                        
+                        <h6 class="text-success">Tips</h6>
+                        <ul class="small">
+                            <li>Short, actionable advice (50-150 words)</li>
+                            <li>Focus on one specific action</li>
+                            <li>Include measurable benefits when possible</li>
+                        </ul>
+                        
+                        <h6 class="text-success mt-3">Articles</h6>
+                        <ul class="small">
+                            <li>In-depth educational content (200-500 words)</li>
+                            <li>Explain concepts and research</li>
+                            <li>Provide context and examples</li>
+                        </ul>
+                        
+                        <h6 class="text-success mt-3">Videos</h6>
+                        <ul class="small">
+                            <li>Educational video content</li>
+                            <li>Multimedia presentations</li>
+                            <li>Step-by-step visual guides</li>
+                        </ul>
+                        
                         <hr>
-                        <p class="small mb-3">
-                            Deleting this content is permanent and cannot be undone.
-                        </p>
-                        <button type="button" class="btn btn-danger w-100" 
-                                onclick="confirmDelete(<?php echo $content['content_id']; ?>)">
-                            <i class="bi bi-trash"></i> Delete This Content
-                        </button>
+                        
+                        <h6 class="text-success">Best Practices</h6>
+                        <ul class="small mb-0">
+                            <li>Use clear, simple language</li>
+                            <li>Be specific and actionable</li>
+                            <li>Include relevant statistics when available</li>
+                            <li>Keep user motivation in mind</li>
+                            <li>Review for accuracy before publishing</li>
+                        </ul>
                     </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Delete Confirmation Modal -->
-    <div class="modal fade" id="deleteModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Confirm Deletion</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <p>Are you sure you want to delete this content?</p>
-                    <p class="text-danger">
-                        <i class="bi bi-exclamation-triangle"></i> 
-                        This action cannot be undone.
-                    </p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <a href="#" id="confirmDeleteBtn" class="btn btn-danger">Delete Content</a>
                 </div>
             </div>
         </div>
@@ -301,9 +375,28 @@ $categories = $conn->query("SELECT * FROM emissions_category ORDER BY category_n
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        function confirmDelete(contentId) {
-            document.getElementById('confirmDeleteBtn').href = 'content.php?delete=1&id=' + contentId;
-            new bootstrap.Modal(document.getElementById('deleteModal')).show();
+        // Show preview of newly selected image
+        function previewNewImage(input) {
+            const preview = document.getElementById('newImagePreview');
+            const previewImg = document.getElementById('newImagePreviewImg');
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    previewImg.src = e.target.result;
+                    preview.style.display = 'block';
+                };
+                reader.readAsDataURL(input.files[0]);
+            } else {
+                preview.style.display = 'none';
+            }
+        }
+
+        // Dim current image preview when remove is checked
+        function toggleRemoveImage(checkbox) {
+            const currentPreview = document.getElementById('currentImagePreview');
+            if (currentPreview) {
+                currentPreview.style.opacity = checkbox.checked ? '0.3' : '1';
+            }
         }
     </script>
 </body>

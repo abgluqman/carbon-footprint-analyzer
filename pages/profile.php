@@ -8,6 +8,11 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
+// Generate CSRF token
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 $userId = $_SESSION['user_id'];
 $errors = [];
 $success = '';
@@ -35,6 +40,11 @@ $stats = $stmt->get_result()->fetch_assoc();
 
 // Handle profile update
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
+    // CSRF validation
+    if (!isset($_POST['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+        http_response_code(403);
+        die('Invalid CSRF token.');
+    }
     $name = trim($_POST['name']);
     $email = trim($_POST['email']);
     $department = trim($_POST['department']);
@@ -84,17 +94,27 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
 
 // Handle password change
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['change_password'])) {
+    // CSRF validation
+    if (!isset($_POST['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+        http_response_code(403);
+        die('Invalid CSRF token.');
+    }
     $currentPassword = $_POST['current_password'];
     $newPassword = $_POST['new_password'];
     $confirmPassword = $_POST['confirm_password'];
-    
+
     // Verify current password
     if (!password_verify($currentPassword, $user['password'])) {
         $errors[] = "Current password is incorrect";
     }
-    
+
     if (strlen($newPassword) < 8) {
         $errors[] = "New password must be at least 8 characters";
+    }
+
+    // Enforce password complexity
+    if (!preg_match('/[A-Z]/', $newPassword) || !preg_match('/[0-9]/', $newPassword) || !preg_match('/[\W_]/', $newPassword)) {
+        $errors[] = "New password must contain at least one uppercase letter, one number, and one special character";
     }
     
     if ($newPassword !== $confirmPassword) {
@@ -145,7 +165,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['change_password'])) {
                         <strong>Error:</strong>
                         <ul class="mb-0">
                             <?php foreach ($errors as $error): ?>
-                                <li><?php echo $error; ?></li>
+                                <li><?php echo htmlspecialchars($error); ?></li>
                             <?php endforeach; ?>
                         </ul>
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
@@ -154,7 +174,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['change_password'])) {
                 
                 <?php if ($success): ?>
                     <div class="alert alert-success alert-dismissible fade show">
-                        <i class="bi bi-check-circle"></i> <?php echo $success; ?>
+                        <i class="bi bi-check-circle"></i> <?php echo htmlspecialchars($success); ?>
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
                 <?php endif; ?>
@@ -253,6 +273,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['change_password'])) {
                                     <div class="tab-pane fade show active" id="profile" role="tabpanel">
                                         <h5 class="mb-3">Edit Profile Information</h5>
                                         <form method="POST">
+                                            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
                                             <div class="mb-3">
                                                 <label for="name" class="form-label">Full Name</label>
                                                 <input type="text" class="form-control" id="name" name="name" 
@@ -285,9 +306,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['change_password'])) {
                                                     ];
                                                     foreach ($departments as $dept):
                                                     ?>
-                                                        <option value="<?php echo $dept; ?>" 
+                                                        <option value="<?php echo htmlspecialchars($dept); ?>" 
                                                                 <?php echo $user['department'] == $dept ? 'selected' : ''; ?>>
-                                                            <?php echo $dept; ?>
+                                                            <?php echo htmlspecialchars($dept); ?>
                                                         </option>
                                                     <?php endforeach; ?>
                                                 </select>
@@ -301,6 +322,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['change_password'])) {
                                         <hr class="my-4">
                                         <h5 class="mb-3">Change Password</h5>
                                         <form method="POST" id="changePasswordForm">
+                                            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
                                             <div class="mb-3">
                                                 <label for="current_password" class="form-label">Current Password</label>
                                                 <input type="password" class="form-control" id="current_password" 
@@ -354,9 +376,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['change_password'])) {
                                         </div>
                                     </div>
                                     
-                                    <!-- Security tab removed; password form moved into Profile tab -->
-                                    
-                                    <!-- Preferences removed -->
                                 </div>
                             </div>
                         </div>
@@ -415,9 +434,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['change_password'])) {
         });
         
         function deleteAccount() {
-            // In production, this would submit a form or make an AJAX request
             if (confirm('Final confirmation: Are you absolutely sure?')) {
-                window.location.href = 'delete_account.php';
+                // Submit a POST form with CSRF token instead of a bare GET redirect
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = 'delete_account.php';
+                const csrfInput = document.createElement('input');
+                csrfInput.type = 'hidden';
+                csrfInput.name = 'csrf_token';
+                csrfInput.value = '<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>';
+                form.appendChild(csrfInput);
+                document.body.appendChild(form);
+                form.submit();
             }
         }
         

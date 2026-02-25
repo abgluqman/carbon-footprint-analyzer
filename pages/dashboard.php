@@ -10,7 +10,20 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
+
+// Matches admin emissions_records.php so both sides always show the same label.
+function calcEmissionLevel(float $val): string {
+    if ($val < 50)  return 'Low';
+    if ($val < 100) return 'Medium';
+    return 'High';
+}
+
 $userId = $_SESSION['user_id'];
+
+// Generate CSRF token for destructive actions (e.g. delete record)
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
 
 // Get dashboard data
 $totalEmissions = getUserTotalEmissions($conn, $userId);
@@ -34,9 +47,11 @@ if ($previousMonthEmissions > 0) {
     $monthTrend = $monthChange > 0 ? 'up' : 'down';
 }
 
-// Get total records count
-$totalRecordsQuery = $conn->query("SELECT COUNT(*) as total FROM emissions_record WHERE user_id = $userId");
-$totalRecords = $totalRecordsQuery->fetch_assoc()['total'];
+// Get total records count — use prepared statement to prevent SQL injection
+$totalRecordsStmt = $conn->prepare("SELECT COUNT(*) as total FROM emissions_record WHERE user_id = ?");
+$totalRecordsStmt->bind_param("i", $userId);
+$totalRecordsStmt->execute();
+$totalRecords = $totalRecordsStmt->get_result()->fetch_assoc()['total'];
 
 // Prepare data for Chart.js
 // Build a lookup of month => total from the query results
@@ -101,11 +116,11 @@ while ($row = $categoryBreakdown->fetch_assoc()) {
                                 // Dynamic greeting based on current time
                                 $hour = (int)date('H');
                                 if ($hour >= 5 && $hour < 12) {
-                                    echo 'Good morning';
+                                    echo 'Good Morning';
                                 } elseif ($hour >= 12 && $hour < 18) {
-                                    echo 'Good afternoon';
+                                    echo 'Good Afternoon';
                                 } else {
-                                    echo 'Good evening';
+                                    echo 'Good Evening';
                                 }
                                 ?>
                             </h1>
@@ -214,7 +229,7 @@ while ($row = $categoryBreakdown->fetch_assoc()) {
                                         <small class="text-muted">kg CO₂</small>
                                         
                                         <?php 
-                                        $prevMonthLevel = getEmissionLevel($previousMonthEmissions);
+                                        $prevMonthLevel = calcEmissionLevel((float)$previousMonthEmissions);
                                         $prevLevelClass = $prevMonthLevel == 'Low' ? 'success' : ($prevMonthLevel == 'Medium' ? 'warning' : 'danger');
                                         ?>
                                         <div class="mt-2">
@@ -290,7 +305,7 @@ while ($row = $categoryBreakdown->fetch_assoc()) {
                                 <div class="d-flex justify-content-between align-items-start">
                                     <div>
                                         <h6 class="text-muted mb-2">Highest Emissions</h6>
-                                        <h3 class="mb-0"><?php echo $highestCategory; ?></h3>
+                                        <h3 class="mb-0"><?php echo htmlspecialchars((string)$highestCategory); ?></h3>
                                         <small class="text-muted">Category</small>
                                     </div>
                                     <div class="bg-warning bg-opacity-10 p-3 rounded">
@@ -369,8 +384,9 @@ while ($row = $categoryBreakdown->fetch_assoc()) {
                                                 <?php 
                                                 $count = 1;
                                                 while ($record = $emissionHistory->fetch_assoc()): 
-                                                    $level = getEmissionLevel($record['total_carbon_emissions']);
+                                                    $level = calcEmissionLevel((float)$record['total_carbon_emissions']);
                                                     $levelClass = $level == 'Low' ? 'success' : ($level == 'Medium' ? 'warning' : 'danger');
+                                                    $safeRecordId = intval($record['record_id']);
 
                                                     // Get category breakdown for this record
                                                     $detailsSql = "SELECT ec.category_name, ed.emissions_value
@@ -386,15 +402,15 @@ while ($row = $categoryBreakdown->fetch_assoc()) {
                                                     // Build modal HTML
                                                     ob_start();
                                                     ?>
-                                                    <!-- Details Modal for Record <?php echo $record['record_id']; ?> -->
-                                                    <div class="modal" id="dashDetailsModal<?php echo $record['record_id']; ?>"
+                                                    <!-- Details Modal for Record <?php echo $safeRecordId; ?> -->
+                                                    <div class="modal" id="dashDetailsModal<?php echo $safeRecordId; ?>"
                                                          tabindex="-1"
-                                                         aria-labelledby="dashDetailsModalLabel<?php echo $record['record_id']; ?>"
+                                                         aria-labelledby="dashDetailsModalLabel<?php echo $safeRecordId; ?>"
                                                          style="z-index: 9999;">
                                                         <div class="modal-dialog" style="z-index: 10000;">
                                                             <div class="modal-content">
                                                                 <div class="modal-header">
-                                                                    <h5 class="modal-title" id="dashDetailsModalLabel<?php echo $record['record_id']; ?>">
+                                                                    <h5 class="modal-title" id="dashDetailsModalLabel<?php echo $safeRecordId; ?>">
                                                                         Emissions Details - <?php echo date('d M Y', strtotime($record['record_date'])); ?>
                                                                     </h5>
                                                                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -431,7 +447,7 @@ while ($row = $categoryBreakdown->fetch_assoc()) {
                                                                 </div>
                                                                 <div class="modal-footer">
                                                                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                                                    <a href="report.php?id=<?php echo $record['record_id']; ?>" class="btn btn-primary">
+                                                                    <a href="report.php?id=<?php echo $safeRecordId; ?>" class="btn btn-primary">
                                                                         <i class="bi bi-file-pdf"></i> Generate Report
                                                                     </a>
                                                                 </div>
@@ -453,15 +469,21 @@ while ($row = $categoryBreakdown->fetch_assoc()) {
                                                             <div class="btn-group" role="group">
                                                                 <button type="button" class="btn btn-sm btn-outline-primary view-details-btn"
                                                                         data-bs-toggle="modal"
-                                                                        data-bs-target="#dashDetailsModal<?php echo $record['record_id']; ?>">
+                                                                        data-bs-target="#dashDetailsModal<?php echo $safeRecordId; ?>">
                                                                     <i class="bi bi-eye"></i> View
                                                                 </button>
-                                                                <a href="report.php?id=<?php echo $record['record_id']; ?>&amp;download=1" class="btn btn-sm btn-outline-success">
+                                                                <a href="report.php?id=<?php echo $safeRecordId; ?>&amp;download=1" class="btn btn-sm btn-outline-success">
                                                                     <i class="bi bi-download"></i> Download
-                                                                </a> 
-                                                                <a href="delete_record.php?id=<?php echo $record['record_id']; ?>" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to delete this record?');">
-                                                                    <i class="bi bi-trash"></i> Delete
                                                                 </a>
+                                                                <!-- CSRF-protected delete form instead of bare GET link -->
+                                                                <form method="POST" action="delete_record.php" style="display:inline;"
+                                                                      onsubmit="return confirm('Are you sure you want to delete this record?');">
+                                                                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8'); ?>">
+                                                                    <input type="hidden" name="id" value="<?php echo $safeRecordId; ?>">
+                                                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                                        <i class="bi bi-trash"></i> Delete
+                                                                    </button>
+                                                                </form>
                                                             </div>                                                            
                                                         </td>
                                                     </tr>

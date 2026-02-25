@@ -9,10 +9,24 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
+function calcEmissionLevel(float $val): string {
+    if ($val < 50)  return 'Low';
+    if ($val < 100) return 'Medium';
+    return 'High';
+}
+
 $userId = $_SESSION['user_id'];
 
-// Get period filter
-$periodFilter = isset($_GET['period']) ? $_GET['period'] : 'daily';
+// Generate CSRF token
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
+// Whitelist period filter to prevent arbitrary string injection
+$allowedPeriods = ['daily', 'weekly', 'monthly'];
+$periodFilter = isset($_GET['period']) && in_array($_GET['period'], $allowedPeriods)
+    ? $_GET['period']
+    : 'daily';
 
 // Pagination
 $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
@@ -62,7 +76,7 @@ $records = $stmt->get_result();
                 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
                     <h1 class="h2">Emission History</h1>
                     <div>
-                        <span class="text-muted">Total Records: <?php echo $totalRecords; ?></span>
+                        <span class="text-muted">Total Records: <?php echo intval($totalRecords); ?></span>
                     </div>
                 </div>
 
@@ -106,12 +120,13 @@ $records = $stmt->get_result();
                                         <?php 
                                         $modalHtml = ''; // Store modal HTML
                                         while ($record = $records->fetch_assoc()):
-                                            $level = getEmissionLevel($record['total_carbon_emissions']);
+                                            $level = calcEmissionLevel((float)$record['total_carbon_emissions']);
                                             $levelClass = $level == 'Low' ? 'success' : ($level == 'Medium' ? 'warning' : 'danger');
+                                            $safeRecordId = intval($record['record_id']);
                                             
                                             // Format date display based on period
-                                            $dateDisplay = date('d M Y', strtotime($record['record_date']));
-                                            $dateCaption = date('l', strtotime($record['record_date']));
+                                            $dateDisplay = htmlspecialchars(date('d M Y', strtotime($record['record_date'])));
+                                            $dateCaption = htmlspecialchars(date('l', strtotime($record['record_date'])));
                                             
                                             if ($periodFilter == 'weekly') {
                                                 $dateTime = new DateTime($record['record_date']);
@@ -119,10 +134,10 @@ $records = $stmt->get_result();
                                                 $weekStart->modify('Monday this week');
                                                 $weekEnd = clone $weekStart;
                                                 $weekEnd->modify('+6 days');
-                                                $dateDisplay = $weekStart->format('d M') . ' - ' . $weekEnd->format('d M Y');
-                                                $dateCaption = 'Week ' . $dateTime->format('W');
+                                                $dateDisplay = htmlspecialchars($weekStart->format('d M') . ' - ' . $weekEnd->format('d M Y'));
+                                                $dateCaption = htmlspecialchars('Week ' . $dateTime->format('W'));
                                             } elseif ($periodFilter == 'monthly') {
-                                                $dateDisplay = date('F Y', strtotime($record['record_date']));
+                                                $dateDisplay = htmlspecialchars(date('F Y', strtotime($record['record_date'])));
                                                 $dateCaption = '';
                                             }
                                             
@@ -140,16 +155,16 @@ $records = $stmt->get_result();
                                             // Build modal HTML and store it
                                             ob_start();
                                             ?>
-                                            <!-- Details Modal for Record <?php echo $record['record_id']; ?> -->
-                                            <div class="modal" id="detailsModal<?php echo $record['record_id']; ?>" 
+                                            <!-- Details Modal for Record <?php echo $safeRecordId; ?> -->
+                                            <div class="modal" id="detailsModal<?php echo $safeRecordId; ?>" 
                                                  tabindex="-1" 
-                                                 aria-labelledby="detailsModalLabel<?php echo $record['record_id']; ?>"
+                                                 aria-labelledby="detailsModalLabel<?php echo $safeRecordId; ?>"
                                                  style="z-index: 9999;">
                                                 <div class="modal-dialog" style="z-index: 10000;">
                                                     <div class="modal-content">
                                                         <div class="modal-header">
-                                                            <h5 class="modal-title" id="detailsModalLabel<?php echo $record['record_id']; ?>">
-                                                                Emissions Details - <?php echo date('d M Y', strtotime($record['record_date'])); ?>
+                                                            <h5 class="modal-title" id="detailsModalLabel<?php echo $safeRecordId; ?>">
+                                                                Emissions Details - <?php echo htmlspecialchars(date('d M Y', strtotime($record['record_date']))); ?>
                                                             </h5>
                                                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                                         </div>
@@ -186,7 +201,7 @@ $records = $stmt->get_result();
                                                         </div>
                                                         <div class="modal-footer">
                                                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                                            <a href="report.php?id=<?php echo $record['record_id']; ?>" class="btn btn-primary">
+                                                            <a href="report.php?id=<?php echo $safeRecordId; ?>" class="btn btn-primary">
                                                                 <i class="bi bi-file-pdf"></i> Generate Report
                                                             </a>
                                                         </div>
@@ -217,21 +232,25 @@ $records = $stmt->get_result();
                                                 <td class="text-center">
                                                     <button type="button" class="btn btn-sm btn-outline-info view-details-btn"
                                                             data-bs-toggle="modal"
-                                                            data-bs-target="#detailsModal<?php echo $record['record_id']; ?>">
+                                                            data-bs-target="#detailsModal<?php echo $safeRecordId; ?>">
                                                         <i class="bi bi-eye"></i> View
                                                     </button>
                                                 </td>
                                                 <td class="text-center">
                                                     <div class="btn-group btn-group-sm">
-                                                        <a href="report.php?id=<?php echo $record['record_id']; ?>" 
+                                                        <a href="report.php?id=<?php echo $safeRecordId; ?>" 
                                                            class="btn btn-outline-primary" title="Generate Report">
                                                             <i class="bi bi-file-pdf"></i>
                                                         </a>
-                                                        <button type="button" class="btn btn-outline-danger" 
-                                                                onclick="deleteRecord(<?php echo $record['record_id']; ?>)"
-                                                                title="Delete Record">
-                                                            <i class="bi bi-trash"></i>
-                                                        </button>
+                                                        
+                                                        <form method="POST" action="delete_record.php" style="display:inline;"
+                                                              onsubmit="return confirm('Are you sure you want to delete this record? This action cannot be undone.');">
+                                                            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8'); ?>">
+                                                            <input type="hidden" name="id" value="<?php echo $safeRecordId; ?>">
+                                                            <button type="submit" class="btn btn-outline-danger" title="Delete Record">
+                                                                <i class="bi bi-trash"></i>
+                                                            </button>
+                                                        </form>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -281,19 +300,12 @@ $records = $stmt->get_result();
             </main>
         </div>
     </div>
-    
-    <!-- All Modals Rendered Here (Outside Main Content) -->
+
     <?php echo $modalHtml ?? ''; ?>
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        function deleteRecord(recordId) {
-            if (confirm('Are you sure you want to delete this record? This action cannot be undone.')) {
-                window.location.href = 'delete_record.php?id=' + recordId;
-            }
-        }
-
-        // MANUAL MODAL CONTROL - Completely bypass Bootstrap's automatic triggering
+        
         document.addEventListener('DOMContentLoaded', function() {
             console.log('Initializing modal fix...');
             
@@ -394,7 +406,7 @@ $records = $stmt->get_result();
             });
         });
 
-        // Sidebar Toggle Functionality - MANUAL ONLY
+        // Sidebar Toggle Functionality 
         const sidebarToggle = document.getElementById('sidebarToggleBtn');
         const sidebar = document.getElementById('sidebar');
 

@@ -10,7 +10,7 @@ if (!isset($_SESSION['user_id'])) {
 
 $userId = $_SESSION['user_id'];
 
-// Get user's emission level for personalized content
+// Get user emission level for personalized content
 $sql = "SELECT total_carbon_emissions 
         FROM emissions_record 
         WHERE user_id = ? 
@@ -30,8 +30,10 @@ if ($lastRecord) {
     else $userLevel = 'High';
 }
 
-// Get filter parameters
-$filterType = isset($_GET['type']) ? $_GET['type'] : '';
+// Get filter parameters — whitelist content type to prevent arbitrary DB queries
+$allowedTypes = ['tip', 'article', 'video', 'guide'];
+$filterTypeRaw = isset($_GET['type']) ? $_GET['type'] : '';
+$filterType = in_array($filterTypeRaw, $allowedTypes) ? $filterTypeRaw : '';
 $filterCategory = isset($_GET['category']) ? intval($_GET['category']) : 0;
 
 // Build query
@@ -112,7 +114,7 @@ $categories = $conn->query("SELECT * FROM emissions_category ORDER BY category_n
                         <span class="badge bg-<?php 
                             echo $userLevel == 'Low' ? 'success' : ($userLevel == 'Medium' ? 'warning' : 'danger'); 
                         ?>">
-                            <?php echo $userLevel; ?>
+                            <?php echo htmlspecialchars($userLevel); ?>
                         </span>
                     </div>
                 </div>
@@ -161,11 +163,23 @@ $categories = $conn->query("SELECT * FROM emissions_category ORDER BY category_n
                 <!-- Content Grid -->
                 <?php if ($contents->num_rows > 0): ?>
                     <div class="row g-4">
-                        <?php while ($content = $contents->fetch_assoc()): ?>
+                        <?php while ($content = $contents->fetch_assoc()): 
+                            $safeContentId = intval($content['content_id']);
+                            //  Detect actual image MIME type instead of hardcoding image/jpeg
+                            $imageMime = 'image/jpeg'; // default fallback
+                            if ($content['content_image']) {
+                                $finfo = new finfo(FILEINFO_MIME_TYPE);
+                                $detectedMime = $finfo->buffer($content['content_image']);
+                                $allowedImageMimes = ['image/jpeg', 'image/png', 'image/gif'];
+                                if (in_array($detectedMime, $allowedImageMimes)) {
+                                    $imageMime = $detectedMime;
+                                }
+                            }
+                        ?>
                             <div class="col-md-6 col-lg-4">
                                 <div class="card h-100 border-0 shadow-sm">
                                     <?php if ($content['content_image']): ?>
-                                        <img src="data:image/jpeg;base64,<?php echo base64_encode($content['content_image']); ?>" 
+                                        <img src="data:<?php echo $imageMime; ?>;base64,<?php echo base64_encode($content['content_image']); ?>" 
                                              class="card-img-top" alt="<?php echo htmlspecialchars($content['title']); ?>"
                                              style="height: 200px; object-fit: cover;">
                                     <?php else: ?>
@@ -206,7 +220,7 @@ $categories = $conn->query("SELECT * FROM emissions_category ORDER BY category_n
                                     <div class="card-footer bg-white border-0">
                                         <button type="button" class="btn btn-outline-success w-100" 
                                                 data-bs-toggle="modal" 
-                                                data-bs-target="#contentModal<?php echo $content['content_id']; ?>">
+                                                data-bs-target="#contentModal<?php echo $safeContentId; ?>">
                                             <i class="bi bi-book"></i> Read More
                                         </button>
                                     </div>
@@ -214,7 +228,7 @@ $categories = $conn->query("SELECT * FROM emissions_category ORDER BY category_n
                             </div>
                             
                             <!-- Content Modal -->
-                            <div class="modal fade" id="contentModal<?php echo $content['content_id']; ?>" tabindex="-1">
+                            <div class="modal fade" id="contentModal<?php echo $safeContentId; ?>" tabindex="-1">
                                 <div class="modal-dialog modal-lg modal-dialog-scrollable">
                                     <div class="modal-content">
                                         <div class="modal-header">
@@ -223,7 +237,7 @@ $categories = $conn->query("SELECT * FROM emissions_category ORDER BY category_n
                                         </div>
                                         <div class="modal-body">
                                             <?php if ($content['content_image']): ?>
-                                                <img src="data:image/jpeg;base64,<?php echo base64_encode($content['content_image']); ?>" 
+                                                <img src="data:<?php echo $imageMime; ?>;base64,<?php echo base64_encode($content['content_image']); ?>" 
                                                      class="img-fluid mb-3 rounded" 
                                                      alt="<?php echo htmlspecialchars($content['title']); ?>">
                                             <?php endif; ?>

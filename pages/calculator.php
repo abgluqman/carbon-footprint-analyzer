@@ -9,90 +9,142 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
+// Generate CSRF token
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 $success = '';
 $errors = [];
-$period = isset($_GET['period']) ? $_GET['period'] : 'daily';
+
+// Whitelist period from GET
+$allowedPeriods = ['daily', 'weekly', 'monthly'];
+$period = isset($_GET['period']) && in_array($_GET['period'], $allowedPeriods)
+    ? $_GET['period']
+    : 'daily';
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    // CSRF validation
+    if (!isset($_POST['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+        http_response_code(403);
+        die('Invalid CSRF token.');
+    }
+
     $emissionsData = [];
-    
-    // Get period and date/time info
-    $period = $_POST['period'] ?? 'daily';
-    $recordDate = $_POST['record_date'] ?? date('Y-m-d');
-    $recordTime = $_POST['record_time'] ?? date('H:i');
-    $recordDateTime = $recordDate . ' ' . $recordTime;
-    
+
+    // Whitelist period from POST
+    $period = isset($_POST['period']) && in_array($_POST['period'], $allowedPeriods)
+        ? $_POST['period']
+        : 'daily';
+
+    // Validate date format (YYYY-MM-DD) and ensure not in future
+    $recordDateRaw = $_POST['record_date'] ?? date('Y-m-d');
+    $parsedDate = DateTime::createFromFormat('Y-m-d', $recordDateRaw);
+    $recordDate = ($parsedDate && $parsedDate->format('Y-m-d') === $recordDateRaw && $recordDateRaw <= date('Y-m-d'))
+        ? $recordDateRaw
+        : date('Y-m-d');
+
     // Electricity
     if (!empty($_POST['electricity_kwh'])) {
         $kwh = floatval($_POST['electricity_kwh']);
-        $emissionsData[] = [
-            'category_id' => 1,
-            'input' => $kwh,
-            'emissions' => calculateElectricityEmissions($kwh)
-        ];
+        if ($kwh < 0 || $kwh > 1000000) {
+            $errors[] = "Invalid electricity value.";
+        } else {
+            $emissionsData[] = [
+                'category_id' => 1,
+                'input' => $kwh,
+                'emissions' => calculateElectricityEmissions($kwh)
+            ];
+        }
     }
-    
+
     // Fuel
     if (!empty($_POST['fuel_liters'])) {
         $liters = floatval($_POST['fuel_liters']);
-        $fuelType = $_POST['fuel_type'] ?? 'petrol';
-        $emissionsData[] = [
-            'category_id' => 2,
-            'input' => $liters . '|' . $fuelType,
-            'emissions' => calculateFuelEmissions($liters, $fuelType)
-        ];
+        $allowedFuelTypes = ['petrol', 'diesel'];
+        $fuelType = isset($_POST['fuel_type']) && in_array($_POST['fuel_type'], $allowedFuelTypes)
+            ? $_POST['fuel_type'] : 'petrol';
+        if ($liters < 0 || $liters > 100000) {
+            $errors[] = "Invalid fuel value.";
+        } else {
+            $emissionsData[] = [
+                'category_id' => 2,
+                'input' => $liters . '|' . $fuelType,
+                'emissions' => calculateFuelEmissions($liters, $fuelType)
+            ];
+        }
     }
-    
+
     // Water
     if (!empty($_POST['water_liters'])) {
         $liters = floatval($_POST['water_liters']);
-        $emissionsData[] = [
-            'category_id' => 3,
-            'input' => $liters,
-            'emissions' => calculateWaterEmissions($liters)
-        ];
+        if ($liters < 0 || $liters > 1000000) {
+            $errors[] = "Invalid water value.";
+        } else {
+            $emissionsData[] = [
+                'category_id' => 3,
+                'input' => $liters,
+                'emissions' => calculateWaterEmissions($liters)
+            ];
+        }
     }
-    
+
     // Waste
     if (!empty($_POST['waste_kg'])) {
         $kg = floatval($_POST['waste_kg']);
-        $wasteType = $_POST['waste_type'] ?? 'non-recyclable';
-        $emissionsData[] = [
-            'category_id' => 4,
-            'input' => $kg . '|' . $wasteType,
-            'emissions' => calculateWasteEmissions($kg, $wasteType)
-        ];
+        $allowedWasteTypes = ['recyclable', 'non-recyclable'];
+        $wasteType = isset($_POST['waste_type']) && in_array($_POST['waste_type'], $allowedWasteTypes)
+            ? $_POST['waste_type'] : 'non-recyclable';
+        if ($kg < 0 || $kg > 100000) {
+            $errors[] = "Invalid waste value.";
+        } else {
+            $emissionsData[] = [
+                'category_id' => 4,
+                'input' => $kg . '|' . $wasteType,
+                'emissions' => calculateWasteEmissions($kg, $wasteType)
+            ];
+        }
     }
-    
+
     // Paper
     if (!empty($_POST['paper_pages'])) {
         $pages = intval($_POST['paper_pages']);
-        $emissionsData[] = [
-            'category_id' => 5,
-            'input' => $pages,
-            'emissions' => calculatePaperEmissions($pages)
-        ];
+        if ($pages < 0 || $pages > 100000) {
+            $errors[] = "Invalid paper value.";
+        } else {
+            $emissionsData[] = [
+                'category_id' => 5,
+                'input' => $pages,
+                'emissions' => calculatePaperEmissions($pages)
+            ];
+        }
     }
-    
+
     // Food
     if (!empty($_POST['food_meals'])) {
         $meals = intval($_POST['food_meals']);
-        $foodType = $_POST['food_type'] ?? 'meat';
-        $emissionsData[] = [
-            'category_id' => 6,
-            'input' => $meals . '|' . $foodType,
-            'emissions' => calculateFoodEmissions($foodType, $meals)
-        ];
+        $allowedFoodTypes = ['meat', 'vegetarian', 'vegan'];
+        $foodType = isset($_POST['food_type']) && in_array($_POST['food_type'], $allowedFoodTypes)
+            ? $_POST['food_type'] : 'meat';
+        if ($meals < 0 || $meals > 10000) {
+            $errors[] = "Invalid food value.";
+        } else {
+            $emissionsData[] = [
+                'category_id' => 6,
+                'input' => $meals . '|' . $foodType,
+                'emissions' => calculateFoodEmissions($foodType, $meals)
+            ];
+        }
     }
-    
-    if (!empty($emissionsData)) {
-        $recordId = saveEmissionsRecord($conn, $_SESSION['user_id'], $emissionsData, $period, $recordDateTime);
+
+    if (!empty($emissionsData) && empty($errors)) {
+        $recordId = saveEmissionsRecord($conn, $_SESSION['user_id'], $emissionsData, $period, $recordDate);
         $success = "Emissions calculated and saved successfully!";
-        
+
         // Redirect to dashboard
         header("Location: dashboard.php?success=1");
         exit();
-    } else {
+    } elseif (empty($emissionsData) && empty($errors)) {
         $errors[] = "Please enter at least one consumption value";
     }
 }
@@ -127,7 +179,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     <div class="alert alert-danger">
                         <ul class="mb-0">
                             <?php foreach ($errors as $error): ?>
-                                <li><?php echo $error; ?></li>
+                                <li><?php echo htmlspecialchars($error); ?></li>
                             <?php endforeach; ?>
                         </ul>
                     </div>
@@ -136,6 +188,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 <div class="card">
                     <div class="card-body">
                         <form method="POST" action="" id="calculatorForm">
+                            <!-- CSRF token -->
+                            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8'); ?>">
+
                             <!-- Period Selection -->
                             <div class="row mb-4">
                                 <div class="col-md-6">
@@ -150,7 +205,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                 </div>
                             </div>
 
-                            <!-- Date and Time Selection -->
+                            <!-- Date Selection -->
                             <div class="row mb-4 pb-4 border-bottom">
                                 <div class="col-md-6">
                                     <label for="record_date" class="form-label">
@@ -342,7 +397,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         
         // Click handler for sidebar outside
         function handleClick(e) {
-            // Never collapse sidebar if a modal is open
             if (isModalOpen) return;
             
             if (sidebar && !sidebar.classList.contains('collapsed')) {
@@ -355,7 +409,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         
         // Touch handler for sidebar outside
         function handleTouch(e) {
-            // Never collapse sidebar if a modal is open
             if (isModalOpen) return;
             
             if (sidebar && !sidebar.classList.contains('collapsed')) {
@@ -381,6 +434,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             });
         });
         
+        // Initialize period UI on page load 
+        document.addEventListener('DOMContentLoaded', function() {
+            const currentPeriod = document.getElementById('period').value;
+            updatePeriodUI(currentPeriod);
+        });
+
         initSidebar();
     </script>
 </body>

@@ -7,7 +7,8 @@ $isLoggedIn = isset($_SESSION['user_id']) && !empty($_SESSION['user_id']);
 
 // Fetch latest educational content (limit 4)
 $contents = [];
-$res = $conn->query("SELECT content_id, title, description, content_type, emissions_level, content_image FROM educational_content ORDER BY content_id DESC LIMIT 4");
+// ✅ Only show general content: no specific category and no specific emission level
+$res = $conn->query("SELECT content_id, title, description, content_type, emissions_level, content_image FROM educational_content WHERE category_id IS NULL AND (emissions_level IS NULL OR emissions_level = '') ORDER BY content_id DESC LIMIT 4");
 if ($res) {
     while ($row = $res->fetch_assoc()) {
         $contents[] = $row;

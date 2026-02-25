@@ -3,26 +3,49 @@ session_start();
 require_once '../config/db_connection.php';
 require_once 'auth_check.php';
 
+
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 $errors = [];
 $success = '';
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    if (!isset($_POST['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+        die('CSRF token validation failed. Please refresh the page and try again.');
+    }
+    
     $title = trim($_POST['title']);
     $description = trim($_POST['description']);
     $contentType = $_POST['content_type'];
-    $emissionsLevel = $_POST['emissions_level'];
+    $emissionsLevel = !empty($_POST['emissions_level']) ? $_POST['emissions_level'] : null;
     $categoryId = !empty($_POST['category_id']) ? intval($_POST['category_id']) : null;
     $adminId = $_SESSION['admin_id'];
     
     // Validation
     if (empty($title)) $errors[] = "Title is required";
+    if (strlen($title) > 150) $errors[] = "Title must be 150 characters or less";
     if (empty($description)) $errors[] = "Description is required";
+    if (strlen($description) > 10000) $errors[] = "Description must be 10,000 characters or less";
     if (empty($contentType)) $errors[] = "Content type is required";
+    
+    //  Validate content_type/emissions_level against whitelist
+    $allowedContentTypes = ['tip', 'article', 'video'];
+    if (!in_array($contentType, $allowedContentTypes)) {
+        $errors[] = "Invalid content type";
+    }
+ 
+    if ($emissionsLevel !== null) {
+        $allowedLevels = ['Low', 'Medium', 'High'];
+        if (!in_array($emissionsLevel, $allowedLevels)) {
+            $errors[] = "Invalid emissions level";
+        }
+    }
     
     // Handle image upload
     $imageData = null;
     if (isset($_FILES['content_image']) && $_FILES['content_image']['error'] == 0) {
-        $allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
 
         // Determine safe max size based on MySQL server's max_allowed_packet
         $mysqlMax = null;
@@ -32,18 +55,52 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $mysqlMax = isset($row['Value']) ? intval($row['Value']) : null;
         }
 
-        // Default to 5MB but cap to mysqlMax-1KB if available
-        $defaultMax = 5 * 1024 * 1024; // 5MB
-        if ($mysqlMax && $mysqlMax > 2048) {
-            $maxSize = min($defaultMax, max(1024, $mysqlMax - 1024));
-        } else {
-            $maxSize = $defaultMax;
+        $defaultMax = 5 * 1024 * 1024; // 5MB default cap
+
+        // ✅ FIX: Also check the actual column type capacity.
+        // BLOB = 64KB, MEDIUMBLOB = 16MB, LONGBLOB = 4GB.
+        // If the column is plain BLOB, cap uploads at 64KB to prevent
+        // "Data too long" errors. Ideally ALTER the column to LONGBLOB.
+        $columnMax = null;
+        $colRes = $conn->query("SELECT DATA_TYPE, CHARACTER_MAXIMUM_LENGTH
+                                FROM information_schema.COLUMNS
+                                WHERE TABLE_SCHEMA = DATABASE()
+                                  AND TABLE_NAME   = 'educational_content'
+                                  AND COLUMN_NAME  = 'content_image'");
+        if ($colRes && $colRow = $colRes->fetch_assoc()) {
+            switch (strtolower($colRow['DATA_TYPE'])) {
+                case 'tinyblob':   $columnMax =        255; break;
+                case 'blob':       $columnMax =     65535; break;
+                case 'mediumblob': $columnMax =  16777215; break;
+                case 'longblob':   $columnMax = null;      break; // no practical limit
+            }
         }
 
-        if (!in_array($_FILES['content_image']['type'], $allowedTypes)) {
-            $errors[] = "Only JPG, PNG, and GIF images are allowed";
+        // Use the most restrictive limit: defaultMax vs max_allowed_packet vs column capacity
+        $maxSize = $defaultMax;
+        if ($mysqlMax && $mysqlMax > 2048) {
+            $maxSize = min($maxSize, max(1024, $mysqlMax - 1024));
+        }
+        if ($columnMax !== null) {
+            $maxSize = min($maxSize, $columnMax);
+        }
+
+        //  Use finfo ONLY (not browser-supplied $_FILES['type'] which is spoofable)
+        $allowedMimes = ['image/jpeg', 'image/png', 'image/gif'];
+        $finfo = new finfo(FILEINFO_MIME_TYPE);
+        $mimeType = $finfo->file($_FILES['content_image']['tmp_name']);
+
+        
+        $imageInfo = @getimagesize($_FILES['content_image']['tmp_name']);
+
+        if (!in_array($mimeType, $allowedMimes) || $imageInfo === false) {
+            $errors[] = "Only valid JPG, PNG, and GIF images are allowed";
         } elseif ($_FILES['content_image']['size'] > $maxSize) {
-            $errors[] = "Image is too large. Maximum allowed by server: " . round($maxSize / 1024) . " KB. Please resize before uploading.";
+            // ✅ Friendly message that explains the column-size issue
+            $limitKB = round($maxSize / 1024);
+            $errors[] = "Image is too large (limit: {$limitKB} KB). "
+                      . "If you need larger images, run this SQL on your database: "
+                      . "ALTER TABLE educational_content MODIFY content_image LONGBLOB;";
         } else {
             $imageData = file_get_contents($_FILES['content_image']['tmp_name']);
         }
@@ -55,19 +112,33 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 VALUES (?, ?, ?, ?, ?, ?, ?)";
         $stmt = $conn->prepare($sql);
         $stmt->bind_param("iisssss", $adminId, $categoryId, $title, $description, $contentType, $emissionsLevel, $imageData);
-        
-        if ($stmt->execute()) {
-            $success = "Content added successfully!";
-            // Clear form
-            $_POST = array();
-        } else {
-            $errors[] = "Failed to add content. Please try again.";
+
+        // ✅ FIX: Wrap execute() in try/catch so MySQL exceptions (e.g. "Data too
+        // long for column") are caught and shown as a friendly error instead of
+        // a fatal crash. This happens when content_image column is BLOB (64KB max)
+        // but the uploaded image is larger. Fix: ALTER TABLE educational_content
+        // MODIFY content_image LONGBLOB;
+        try {
+            if ($stmt->execute()) {
+                $success = "Content added successfully!";
+                $_POST = [];
+            } else {
+                $errors[] = "Failed to add content. Please try again.";
+            }
+        } catch (mysqli_sql_exception $e) {
+            if (str_contains($e->getMessage(), 'Data too long')) {
+                $errors[] = "Image is too large for the database column. "
+                          . "Ask your administrator to run: "
+                          . "ALTER TABLE educational_content MODIFY content_image LONGBLOB;";
+            } else {
+                $errors[] = "Database error: " . htmlspecialchars($e->getMessage());
+            }
         }
     }
 }
 
 // Get categories
-$categories = $conn->query("SELECT * FROM emissions_category ORDER BY category_name");
+$categories = $conn->query("SELECT category_id, category_name FROM emissions_category ORDER BY category_name");
 ?>
 
 <!DOCTYPE html>
@@ -96,7 +167,7 @@ $categories = $conn->query("SELECT * FROM emissions_category ORDER BY category_n
                 <strong>Error:</strong>
                 <ul class="mb-0">
                     <?php foreach ($errors as $error): ?>
-                        <li><?php echo $error; ?></li>
+                        <li><?php echo htmlspecialchars($error); ?></li>
                     <?php endforeach; ?>
                 </ul>
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
@@ -105,7 +176,7 @@ $categories = $conn->query("SELECT * FROM emissions_category ORDER BY category_n
         
         <?php if ($success): ?>
             <div class="alert alert-success alert-dismissible fade show">
-                <i class="bi bi-check-circle"></i> <?php echo $success; ?>
+                <i class="bi bi-check-circle"></i> <?php echo htmlspecialchars($success); ?>
                 <a href="content.php" class="alert-link">View all content</a>
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
@@ -116,11 +187,13 @@ $categories = $conn->query("SELECT * FROM emissions_category ORDER BY category_n
                 <div class="card border-0 shadow-sm">
                     <div class="card-body">
                         <form method="POST" enctype="multipart/form-data">
+                            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8'); ?>">
+                            
                             <div class="mb-3">
                                 <label for="title" class="form-label">Title <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" id="title" name="title" 
                                        value="<?php echo isset($_POST['title']) ? htmlspecialchars($_POST['title']) : ''; ?>" 
-                                       placeholder="Enter content title" required>
+                                       placeholder="Enter content title" required maxlength="150">
                             </div>
                             
                             <div class="mb-3">
@@ -141,8 +214,8 @@ $categories = $conn->query("SELECT * FROM emissions_category ORDER BY category_n
                                         <option value="article" <?php echo (isset($_POST['content_type']) && $_POST['content_type'] == 'article') ? 'selected' : ''; ?>>
                                             Article
                                         </option>
-                                        <option value="guide" <?php echo (isset($_POST['content_type']) && $_POST['content_type'] == 'guide') ? 'selected' : ''; ?>>
-                                            Guide
+                                        <option value="video" <?php echo (isset($_POST['content_type']) && $_POST['content_type'] == 'video') ? 'selected' : ''; ?>>
+                                            Video
                                         </option>
                                     </select>
                                 </div>
@@ -221,11 +294,11 @@ $categories = $conn->query("SELECT * FROM emissions_category ORDER BY category_n
                             <li>Provide context and examples</li>
                         </ul>
                         
-                        <h6 class="text-success mt-3">Guides</h6>
+                        <h6 class="text-success mt-3">Videos</h6>
                         <ul class="small">
-                            <li>Step-by-step instructions (300+ words)</li>
-                            <li>Comprehensive how-to content</li>
-                            <li>Include multiple actionable steps</li>
+                            <li>Educational video content</li>
+                            <li>Multimedia presentations</li>
+                            <li>Step-by-step visual guides</li>
                         </ul>
                         
                         <hr>

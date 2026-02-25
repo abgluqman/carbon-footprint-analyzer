@@ -50,12 +50,26 @@ if (isset($_GET['generate']) || !$existingReport) {
     $pdfPath = $existingReport['pdf_path'];
 }
 
+//  Validate $pdfPath to prevent path traversal
+// Resolve the real path and confirm it stays within the expected reports directory
+if ($pdfPath !== null) {
+    $reportsBase = realpath(__DIR__ . '/../reports');
+    $fullPath = realpath(__DIR__ . '/../' . $pdfPath);
+    // Reject if path escapes the reports directory or resolves to nothing
+    if ($fullPath === false || $reportsBase === false || strpos($fullPath, $reportsBase) !== 0) {
+        $pdfPath = null;
+        $error = "Invalid report path.";
+    }
+}
+
 // Handle download
 if (isset($_GET['download']) && $pdfPath) {
-    $fullPath = __DIR__ . '/../' . $pdfPath;
-    if (file_exists($fullPath)) {
+    $fullPath = realpath(__DIR__ . '/../' . $pdfPath);
+    if ($fullPath && file_exists($fullPath)) {
+        //  Sanitize filename for Content-Disposition header to prevent header injection
+        $safeFilename = preg_replace('/[^A-Za-z0-9_\-\.]/', '_', basename($fullPath));
         header('Content-Type: application/pdf');
-        header('Content-Disposition: attachment; filename="' . basename($pdfPath) . '"');
+        header('Content-Disposition: attachment; filename="' . $safeFilename . '"');
         header('Content-Length: ' . filesize($fullPath));
         readfile($fullPath);
         exit();
@@ -98,7 +112,7 @@ if (isset($_GET['download']) && $pdfPath) {
                 
                 <?php if ($error): ?>
                     <div class="alert alert-danger">
-                        <i class="bi bi-exclamation-triangle"></i> <?php echo $error; ?>
+                        <i class="bi bi-exclamation-triangle"></i> <?php echo htmlspecialchars($error); ?>
                     </div>
                 <?php endif; ?>
                 
@@ -146,7 +160,7 @@ if (isset($_GET['download']) && $pdfPath) {
                             </h5>
                         </div>
                         <div class="card-body p-0">
-                            <iframe src="../<?php echo $pdfPath; ?>" 
+                            <iframe src="../<?php echo htmlspecialchars($pdfPath, ENT_QUOTES, 'UTF-8'); ?>" 
                                     style="width: 100%; height: 800px; border: none;">
                             </iframe>
                         </div>

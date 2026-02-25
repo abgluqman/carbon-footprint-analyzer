@@ -126,7 +126,7 @@ class CarbonFootprintPDF extends TCPDF {
             <tr style="background-color: #f8f9fa;">
                 <td style="width: 50%; font-weight: bold;">Total Carbon Emissions</td>
                 <td style="width: 50%; text-align: right; font-size: 16px; color: #198754;">
-                    ' . number_format($totalEmissions, 2) . ' kg CO₂
+                    ' . number_format($totalEmissions, 2) . ' kg CO<sub>₂</sub>
                 </td>
             </tr>
             <tr>
@@ -169,7 +169,7 @@ class CarbonFootprintPDF extends TCPDF {
                     <th style="width: 10%; text-align: center;">No.</th>
                     <th style="width: 35%;">Category</th>
                     <th style="width: 25%; text-align: center;">Input Value</th>
-                    <th style="width: 30%; text-align: right;">Emissions (kg CO₂)</th>
+                    <th style="width: 30%; text-align: right;">Emissions (kg CO<sub>₂</sub>)</th>
                 </tr>
             </thead>
             <tbody>';
@@ -197,7 +197,7 @@ class CarbonFootprintPDF extends TCPDF {
                 <tr style="background-color: #d1e7dd; font-weight: bold;">
                     <td colspan="3" style="text-align: right;">TOTAL EMISSIONS:</td>
                     <td style="text-align: right; color: #198754; font-size: 12px;">
-                        ' . number_format($this->reportData['total_emissions'], 2) . ' kg CO₂
+                        ' . number_format($this->reportData['total_emissions'], 2) . ' kg CO<sub>₂</sub>
                     </td>
                 </tr>
             </tbody>

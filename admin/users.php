@@ -3,19 +3,35 @@ session_start();
 require_once '../config/db_connection.php';
 require_once 'auth_check.php';
 
-// Handle user deletion
-if (isset($_GET['delete']) && isset($_GET['id'])) {
-    $userId = intval($_GET['id']);
+//  Generate CSRF token
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
+// : Handle user deletion via POST (not GET)
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['delete_user'])) {
+    //  Validate CSRF token using hash_equals to prevent timing attacks
+    if (!isset($_POST['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+        die('CSRF token validation failed');
+    }
     
-    // Delete user (cascade will handle related records)
-    $sql = "DELETE FROM user WHERE user_id = ?";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("i", $userId);
+    $userId = intval($_POST['user_id']);
     
-    if ($stmt->execute()) {
-        $success = "User deleted successfully";
+    //  Additional authorization check 
+    //  prevent deleting yourself or super admin
+    if ($userId == $_SESSION['admin_id']) {
+        $error = "You cannot delete your own account";
     } else {
-        $error = "Failed to delete user";
+        // Delete user (cascade will handle related records)
+        $sql = "DELETE FROM user WHERE user_id = ?";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("i", $userId);
+        
+        if ($stmt->execute()) {
+            $success = "User deleted successfully";
+        } else {
+            $error = "Failed to delete user";
+        }
     }
 }
 
@@ -56,14 +72,14 @@ $users = $conn->query($sql);
         
         <?php if (isset($success)): ?>
             <div class="alert alert-success alert-dismissible fade show">
-                <i class="bi bi-check-circle"></i> <?php echo $success; ?>
+                <i class="bi bi-check-circle"></i> <?php echo htmlspecialchars($success); ?>
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
         <?php endif; ?>
         
         <?php if (isset($error)): ?>
             <div class="alert alert-danger alert-dismissible fade show">
-                <i class="bi bi-exclamation-triangle"></i> <?php echo $error; ?>
+                <i class="bi bi-exclamation-triangle"></i> <?php echo htmlspecialchars($error); ?>
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
         <?php endif; ?>
@@ -86,15 +102,16 @@ $users = $conn->query($sql);
                         </thead>
                         <tbody>
                             <?php while ($user = $users->fetch_assoc()): ?>
+                                <?php $safeUserId = intval($user['user_id']); ?>
                                 <tr>
-                                    <td><?php echo $user['user_id']; ?></td>
+                                    <td><?php echo $safeUserId; ?></td>
                                     <td>
                                         <strong><?php echo htmlspecialchars($user['name']); ?></strong>
                                     </td>
                                     <td><?php echo htmlspecialchars($user['email']); ?></td>
                                     <td><?php echo htmlspecialchars($user['department']); ?></td>
                                     <td class="text-center">
-                                        <span class="badge bg-info"><?php echo $user['total_records']; ?></span>
+                                        <span class="badge bg-info"><?php echo intval($user['total_records']); ?></span>
                                     </td>
                                     <td class="text-end">
                                         <?php echo number_format($user['total_emissions'], 2); ?> kg CO₂
@@ -104,12 +121,12 @@ $users = $conn->query($sql);
                                     </td>
                                     <td class="text-center">
                                         <div class="btn-group btn-group-sm">
-                                            <a href="user_details.php?id=<?php echo $user['user_id']; ?>" 
+                                            <a href="user_details.php?id=<?php echo $safeUserId; ?>" 
                                                class="btn btn-outline-primary" title="View Details">
                                                 <i class="bi bi-eye"></i>
                                             </a>
                                             <button type="button" class="btn btn-outline-danger" 
-                                                    onclick="confirmDelete(<?php echo $user['user_id']; ?>, '<?php echo htmlspecialchars($user['name']); ?>')"
+                                                    onclick="confirmDelete(<?php echo $safeUserId; ?>, '<?php echo htmlspecialchars($user['name'], ENT_QUOTES); ?>')"
                                                     title="Delete User">
                                                 <i class="bi bi-trash"></i>
                                             </button>
@@ -122,27 +139,34 @@ $users = $conn->query($sql);
                 </div>
             </div>
         </div>
-    </div>
+    </main>
     
-    <!-- Delete Confirmation Modal -->
+    <!--  Delete Confirmation Modal with POST form -->
     <div class="modal fade" id="deleteModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Confirm Deletion</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <p>Are you sure you want to delete user <strong id="userName"></strong>?</p>
-                    <p class="text-danger">
-                        <i class="bi bi-exclamation-triangle"></i> 
-                        This will permanently delete all their emission records and reports.
-                    </p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <a href="#" id="confirmDeleteBtn" class="btn btn-danger">Delete User</a>
-                </div>
+                <form method="POST" id="deleteForm">
+                    <!--  CSRF token -->
+                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8'); ?>">
+                    <input type="hidden" name="delete_user" value="1">
+                    <input type="hidden" name="user_id" id="deleteUserId">
+                    
+                    <div class="modal-header">
+                        <h5 class="modal-title">Confirm Deletion</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Are you sure you want to delete user <strong id="userName"></strong>?</p>
+                        <p class="text-danger">
+                            <i class="bi bi-exclamation-triangle"></i> 
+                            This will permanently delete all their emission records and reports.
+                        </p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-danger">Delete User</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -151,10 +175,9 @@ $users = $conn->query($sql);
     <script>
         function confirmDelete(userId, userName) {
             document.getElementById('userName').textContent = userName;
-            document.getElementById('confirmDeleteBtn').href = '?delete=1&id=' + userId;
+            document.getElementById('deleteUserId').value = userId;
             new bootstrap.Modal(document.getElementById('deleteModal')).show();
         }
     </script>
-    </main>
 </body>
 </html>
