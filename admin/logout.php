@@ -1,13 +1,15 @@
 <?php
 session_start();
 
-// Clear admin session
-unset($_SESSION['admin_id']);
-unset($_SESSION['admin_name']);
-unset($_SESSION['admin_email']);
-unset($_SESSION['is_admin']);
+// Clear all session data (not just individual keys)
+$_SESSION = array();
 
-// Destroy session
+//  Destroy the session cookie properly
+if (isset($_COOKIE[session_name()])) {
+    setcookie(session_name(), '', time() - 3600, '/');
+}
+
+//  Destroy the session
 session_destroy();
 
 // Redirect to admin login

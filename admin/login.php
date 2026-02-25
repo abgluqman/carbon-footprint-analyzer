@@ -11,9 +11,11 @@ if (isset($_SESSION['admin_id'])) {
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $email = mysqli_real_escape_string($conn, trim($_POST['email']));
+    //  Direct trim, no need for mysqli_real_escape_string with prepared statements
+    $email = trim($_POST['email']);
     $password = trim($_POST['password']);
     
+    //  Prepared statement prevents SQL injection
     $sql = "SELECT admin_id, name, email, password FROM admin WHERE email = ?";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("s", $email);
@@ -23,7 +25,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if ($result->num_rows == 1) {
         $admin = $result->fetch_assoc();
         
+        //  Password verification with hashed password
         if (password_verify($password, $admin['password'])) {
+            //  Regenerate session ID to prevent session fixation
+            session_regenerate_id(true);
+            
             $_SESSION['admin_id'] = $admin['admin_id'];
             $_SESSION['admin_name'] = $admin['name'];
             $_SESSION['admin_email'] = $admin['email'];
@@ -66,7 +72,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         
                         <?php if ($error): ?>
                             <div class="alert alert-danger">
-                                <i class="bi bi-exclamation-triangle"></i> <?php echo $error; ?>
+                                <i class="bi bi-exclamation-triangle"></i> 
+                                <?php echo htmlspecialchars($error); ?>
                             </div>
                         <?php endif; ?>
                         
