@@ -329,7 +329,7 @@ function getCurrentMonthLevel($conn, $userId) {
 }
 
 function getLatestEmissionRecord($conn, $userId) {
-    $sql = "SELECT total_carbon_emissions, record_date 
+    $sql = "SELECT total_carbon_emissions, record_date, period
             FROM emissions_record 
             WHERE user_id = ? 
             ORDER BY record_date DESC 
@@ -341,15 +341,18 @@ function getLatestEmissionRecord($conn, $userId) {
     $row = $result->fetch_assoc();
     
     if ($row) {
-        // Detect period based on emission amount
         $emissions = $row['total_carbon_emissions'];
-        $period = detectPeriodFromAmount($emissions);
+        $allowedPeriods = ['daily', 'weekly', 'monthly'];
+        // Use stored period from DB; fall back to amount-based only for old records without period
+        $period = (!empty($row['period']) && in_array($row['period'], $allowedPeriods))
+            ? $row['period']
+            : detectPeriodFromAmount($emissions);
         
         return [
             'emissions' => $emissions,
-            'date' => $row['record_date'],
-            'period' => $period,
-            'level' => getEmissionLevelAuto($emissions)
+            'date'      => $row['record_date'],
+            'period'    => $period,
+            'level'     => getEmissionLevelAuto($emissions)
         ];
     }
     

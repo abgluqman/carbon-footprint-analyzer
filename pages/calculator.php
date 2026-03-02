@@ -191,17 +191,23 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                             <!-- CSRF token -->
                             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8'); ?>">
 
-                            <!-- Period Selection -->
+                            <!-- Period Selection (controlled by sidebar) -->
                             <div class="row mb-4">
                                 <div class="col-md-6">
-                                    <label for="period" class="form-label fw-bold">
+                                    <label class="form-label fw-bold">
                                         <i class="bi bi-calendar3"></i> Calculation Period
                                     </label>
-                                    <select class="form-select" id="period" name="period" onchange="updatePeriodUI(this.value)">
-                                        <option value="daily" <?php echo $period == 'daily' ? 'selected' : ''; ?>>Daily</option>
-                                        <option value="weekly" <?php echo $period == 'weekly' ? 'selected' : ''; ?>>Weekly</option>
-                                        <option value="monthly" <?php echo $period == 'monthly' ? 'selected' : ''; ?>>Monthly</option>
-                                    </select>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-success text-white">
+                                            <i class="bi bi-calendar3"></i>
+                                        </span>
+                                        <input type="text" class="form-control fw-bold text-capitalize" 
+                                               value="<?php echo htmlspecialchars($period); ?>" readonly>
+                                        <input type="hidden" name="period" id="period" value="<?php echo htmlspecialchars($period); ?>">
+                                    </div>
+                                    <small class="text-muted mt-1 d-block">
+                                        <i class="bi bi-info-circle"></i> Change period using the sidebar menu
+                                    </small>
                                 </div>
                             </div>
 
@@ -343,35 +349,24 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             });
         }
 
-        // Select Period from Sidebar
-        function selectPeriod(period) {
-            const formPeriod = document.getElementById('period');
-            if (formPeriod) {
-                formPeriod.value = period;
-                updatePeriodUI(period);
-            }
-        }
-
-        // Update Period UI
-        function updatePeriodUI(period) {
+        // Initialize period UI on page load 
+        document.addEventListener('DOMContentLoaded', function() {
+            const period = document.getElementById('period').value;
             const periodInfo = document.getElementById('periodInfo');
             const dateLabel = document.querySelector('label[for="record_date"]');
-            
             const messages = {
                 daily: 'For daily emissions recorded today',
                 weekly: 'For weekly emissions (week containing this date)',
                 monthly: 'For monthly emissions (month containing this date)'
             };
-            
             const labels = {
                 daily: '<i class="bi bi-calendar"></i> Daily Date',
                 weekly: '<i class="bi bi-calendar"></i> Week Starting Date',
                 monthly: '<i class="bi bi-calendar"></i> Month Date'
             };
-            
             if (periodInfo) periodInfo.textContent = messages[period] || messages.daily;
             if (dateLabel) dateLabel.innerHTML = labels[period] || labels.daily;
-        }
+        });
 
         // Sidebar Toggle Functionality
         const sidebarToggle = document.getElementById('sidebarToggleBtn');

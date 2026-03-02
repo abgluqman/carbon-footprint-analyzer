@@ -81,11 +81,11 @@ function saveEmissionsRecord($conn, $userId, $emissionsData, $period = 'daily', 
     // Calculate period key based on the date and period type
     $periodKey = calculatePeriodKey($recordDate, $period);
     
-    // Insert emissions record
-    $sql = "INSERT INTO emissions_record (user_id, record_date, total_carbon_emissions) 
-            VALUES (?, ?, ?)";
+    // Insert emissions record (period saved to DB)
+    $sql = "INSERT INTO emissions_record (user_id, record_date, total_carbon_emissions, period) 
+            VALUES (?, ?, ?, ?)";
     $stmt = $conn->prepare($sql);
-    $stmt->bind_param("isd", $userId, $recordDate, $totalEmissions);
+    $stmt->bind_param("isds", $userId, $recordDate, $totalEmissions, $period);
     
     $stmt->execute();
     $recordId = $stmt->insert_id;
