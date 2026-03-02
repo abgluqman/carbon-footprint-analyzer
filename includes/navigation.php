@@ -1,4 +1,4 @@
-<nav class="navbar navbar-expand-lg navbar-dark bg-success">
+<nav class="navbar navbar-expand-lg navbar-dark bg-success shadow-sm sticky-top">
     <div class="container-fluid">
         <button id="sidebarToggleBtn" class="btn btn-sm btn-outline-light me-2" style="border: none; padding: 0.5rem 0.75rem;">
             <i class="bi bi-list"></i>

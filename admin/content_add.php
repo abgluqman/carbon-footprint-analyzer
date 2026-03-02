@@ -55,12 +55,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $mysqlMax = isset($row['Value']) ? intval($row['Value']) : null;
         }
 
-        $defaultMax = 5 * 1024 * 1024; // 5MB default cap
+        $defaultMax = 16 * 1024 * 1024; 
 
-        // ✅ FIX: Also check the actual column type capacity.
-        // BLOB = 64KB, MEDIUMBLOB = 16MB, LONGBLOB = 4GB.
-        // If the column is plain BLOB, cap uploads at 64KB to prevent
-        // "Data too long" errors. Ideally ALTER the column to LONGBLOB.
+        
         $columnMax = null;
         $colRes = $conn->query("SELECT DATA_TYPE, CHARACTER_MAXIMUM_LENGTH
                                 FROM information_schema.COLUMNS
@@ -96,7 +93,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         if (!in_array($mimeType, $allowedMimes) || $imageInfo === false) {
             $errors[] = "Only valid JPG, PNG, and GIF images are allowed";
         } elseif ($_FILES['content_image']['size'] > $maxSize) {
-            // ✅ Friendly message that explains the column-size issue
             $limitKB = round($maxSize / 1024);
             $errors[] = "Image is too large (limit: {$limitKB} KB). "
                       . "If you need larger images, run this SQL on your database: "
@@ -113,11 +109,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $stmt = $conn->prepare($sql);
         $stmt->bind_param("iisssss", $adminId, $categoryId, $title, $description, $contentType, $emissionsLevel, $imageData);
 
-        // ✅ FIX: Wrap execute() in try/catch so MySQL exceptions (e.g. "Data too
-        // long for column") are caught and shown as a friendly error instead of
-        // a fatal crash. This happens when content_image column is BLOB (64KB max)
-        // but the uploaded image is larger. Fix: ALTER TABLE educational_content
-        // MODIFY content_image LONGBLOB;
+        
         try {
             if ($stmt->execute()) {
                 $success = "Content added successfully!";
@@ -256,7 +248,7 @@ $categories = $conn->query("SELECT category_id, category_name FROM emissions_cat
                                 <label for="content_image" class="form-label">Image (Optional)</label>
                                 <input type="file" class="form-control" id="content_image" name="content_image" 
                                        accept="image/jpeg,image/png,image/gif">
-                                <small class="text-muted">Max size: 5MB. Formats: JPG, PNG, GIF</small>
+                                <small class="text-muted">Max size: 16MB. Formats: JPG, PNG, GIF</small>
                             </div>
                             
                             <div class="d-grid gap-2">

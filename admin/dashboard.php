@@ -52,14 +52,15 @@ $sql = "SELECT er.record_id, er.record_date, er.total_carbon_emissions,
 $recentRecords = $conn->query($sql);
 
 // Monthly trend
+
 $sql = "SELECT 
-            DATE_FORMAT(record_date, '%b %Y') as month,
+            DATE_FORMAT(MIN(record_date), '%b %Y') as month,
             COUNT(*) as records,
             SUM(total_carbon_emissions) as total_emissions
         FROM emissions_record
         WHERE record_date >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
-        GROUP BY DATE_FORMAT(record_date, '%Y-%m')
-        ORDER BY record_date ASC";
+        GROUP BY YEAR(record_date), MONTH(record_date)
+        ORDER BY MIN(record_date) ASC";
 $monthlyTrend = $conn->query($sql);
 
 $trendLabels = [];

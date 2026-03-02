@@ -4,7 +4,7 @@
         <!-- Brand -->
         <div class="px-3 mb-4 text-white">
             <h5 class="mb-0">
-                <i class="bi bi-shield-check"></i> Admin Panel
+                <i class="bi bi-shield-check"></i> Admin 
             </h5>
             <small class="text-white-50">Carbon Footprint Analyzer</small>
         </div>

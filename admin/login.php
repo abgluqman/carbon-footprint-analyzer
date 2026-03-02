@@ -63,10 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 <div class="card shadow-lg border-0">
                     <div class="card-body p-5">
                         <div class="text-center mb-4">
-                            <div class="bg-success bg-opacity-10 d-inline-block p-3 rounded-circle mb-3">
-                                <i class="bi bi-shield-lock text-success" style="font-size: 2.5rem;"></i>
-                            </div>
-                            <h2 class="text-success">Admin Portal</h2>
+                            <h2 class="text-success">Admin Login</h2>
                             <p class="text-muted">Carbon Footprint Analyzer</p>
                         </div>
                         

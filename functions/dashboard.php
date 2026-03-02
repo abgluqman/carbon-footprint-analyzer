@@ -1,6 +1,4 @@
 <?php
-// Helper functions for emission level detection
-// (These should eventually be in emissions.php)
 
 if (!function_exists('getEmissionLevelAuto')) {
     function getEmissionLevelAuto($totalEmissions) {
@@ -68,7 +66,6 @@ function getLatestEmissionLevel($conn, $userId) {
     $row = $result->fetch_assoc();
     
     if ($row) {
-        // Use smart auto-detection - no database changes needed!
         return getEmissionLevelAuto($row['total_carbon_emissions']);
     }
     return 'N/A';

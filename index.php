@@ -7,7 +7,7 @@ $isLoggedIn = isset($_SESSION['user_id']) && !empty($_SESSION['user_id']);
 
 // Fetch latest educational content (limit 4)
 $contents = [];
-// ✅ Only show general content: no specific category and no specific emission level
+// Only show general content: no specific category and no specific emission level
 $res = $conn->query("SELECT content_id, title, description, content_type, emissions_level, content_image FROM educational_content WHERE category_id IS NULL AND (emissions_level IS NULL OR emissions_level = '') ORDER BY content_id DESC LIMIT 4");
 if ($res) {
     while ($row = $res->fetch_assoc()) {
@@ -171,16 +171,20 @@ if ($res) {
             <div class="row g-4">
                 <?php if (!empty($contents)): ?>
                     <?php foreach ($contents as $item): ?>
-                        <div class="col-md-6 col-lg-3">
+                        <div class="col-12 col-md-6">
                             <div class="card h-100 border-0 shadow-sm">
                                 <?php if (!empty($item['content_image'])): ?>
-                                    <img src="data:image/jpeg;base64,<?php echo base64_encode($item['content_image']); ?>"
-                                         class="card-img-top" alt="<?php echo htmlspecialchars($item['title']); ?>">
+                                    <div style="width:100%; aspect-ratio: 16/9; overflow:hidden; background:#f0f0f0;">
+                                        <img src="data:image/jpeg;base64,<?php echo base64_encode($item['content_image']); ?>"
+                                             class="card-img-top"
+                                             alt="<?php echo htmlspecialchars($item['title']); ?>"
+                                             style="width:100%; height:100%; object-fit:contain; object-position:center; display:block;">
+                                    </div>
                                 <?php endif; ?>
-                                <div class="card-body">
-                                    <h6 class="card-title"><?php echo htmlspecialchars($item['title']); ?></h6>
-                                    <p class="card-text small text-muted">
-                                        <?php echo htmlspecialchars(substr($item['description'], 0, 80)) . '...'; ?>
+                                <div class="card-body p-4">
+                                    <h5 class="card-title"><?php echo htmlspecialchars($item['title']); ?></h5>
+                                    <p class="card-text text-muted">
+                                        <?php echo htmlspecialchars(substr($item['description'], 0, 180)) . '...'; ?>
                                     </p>
                                     <a href="pages/tips.php" 
                                        class="content-card-link btn btn-sm btn-outline-success"
