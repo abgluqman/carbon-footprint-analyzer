@@ -56,10 +56,51 @@ function calculateFoodEmissions($mealType, $count = 1) {
     return ($factors[$mealType] ?? EmissionFactors::FOOD_MEAT) * $count;
 }
 
-function getEmissionLevel($totalEmissions) {
-    if ($totalEmissions < 200) return 'Low';
-    if ($totalEmissions <= 500) return 'Medium';
-    return 'High';
+/**
+ * ✅ IMPROVED: Calculate emission level based on total emissions AND period type
+ * Different periods have different thresholds because:
+ * - 50 kg/day = 1,500 kg/month (VERY HIGH!)
+ * - 50 kg/week = 215 kg/month (Medium)
+ * - 50 kg/month = Excellent (Low)
+ * 
+ * @param float $totalEmissions - Total CO2 emissions in kg
+ * @param string $period - 'daily', 'weekly', or 'monthly' (default: 'monthly')
+ * @return string - 'Low', 'Medium', or 'High'
+ */
+function getEmissionLevel($totalEmissions, $period = 'monthly') {
+    // Period-specific thresholds (all normalized to ~monthly equivalent)
+    $thresholds = [
+        'daily' => [
+            'low' => 3,      // < 3 kg/day = Low (~90 kg/month)
+            'medium' => 10   // 3-10 kg/day = Medium (~90-300 kg/month)
+                            // > 10 kg/day = High (>300 kg/month)
+        ],
+        'weekly' => [
+            'low' => 20,     // < 20 kg/week = Low (~85 kg/month)
+            'medium' => 70   // 20-70 kg/week = Medium (~85-300 kg/month)
+                            // > 70 kg/week = High (>300 kg/month)
+        ],
+        'monthly' => [
+            'low' => 100,    // < 100 kg/month = Low
+            'medium' => 300  // 100-300 kg/month = Medium
+                            // > 300 kg/month = High
+        ]
+    ];
+    
+    // Default to monthly if period not recognized (backward compatibility)
+    if (!isset($thresholds[$period])) {
+        $period = 'monthly';
+    }
+    
+    $limits = $thresholds[$period];
+    
+    if ($totalEmissions < $limits['low']) {
+        return 'Low';
+    } elseif ($totalEmissions < $limits['medium']) {
+        return 'Medium';
+    } else {
+        return 'High';
+    }
 }
 
 function saveEmissionsRecord($conn, $userId, $emissionsData, $period = 'daily', $recordDateTime = null) {

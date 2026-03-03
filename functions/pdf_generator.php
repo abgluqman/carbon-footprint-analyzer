@@ -126,7 +126,7 @@ class CarbonFootprintPDF extends TCPDF {
             <tr style="background-color: #f8f9fa;">
                 <td style="width: 50%; font-weight: bold;">Total Carbon Emissions</td>
                 <td style="width: 50%; text-align: right; font-size: 16px; color: #198754;">
-                    ' . number_format($totalEmissions, 2) . ' kg CO<sub>₂</sub>
+                    ' . number_format($totalEmissions, 2) . ' kg CO<sub>2</sub>
                 </td>
             </tr>
             <tr>
@@ -169,7 +169,7 @@ class CarbonFootprintPDF extends TCPDF {
                     <th style="width: 10%; text-align: center;">No.</th>
                     <th style="width: 35%;">Category</th>
                     <th style="width: 25%; text-align: center;">Input Value</th>
-                    <th style="width: 30%; text-align: right;">Emissions (kg CO<sub>₂</sub>)</th>
+                    <th style="width: 30%; text-align: right;">Emissions (kg CO<sub>2</sub>)</th>
                 </tr>
             </thead>
             <tbody>';
@@ -197,7 +197,7 @@ class CarbonFootprintPDF extends TCPDF {
                 <tr style="background-color: #d1e7dd; font-weight: bold;">
                     <td colspan="3" style="text-align: right;">TOTAL EMISSIONS:</td>
                     <td style="text-align: right; color: #198754; font-size: 12px;">
-                        ' . number_format($this->reportData['total_emissions'], 2) . ' kg CO<sub>₂</sub>
+                        ' . number_format($this->reportData['total_emissions'], 2) . ' kg CO<sub>2</sub>
                     </td>
                 </tr>
             </tbody>
@@ -245,11 +245,11 @@ class CarbonFootprintPDF extends TCPDF {
             if ($previousEmission !== null) {
                 $change = $record['total'] - $previousEmission;
                 if ($change > 0) {
-                    $trend = '<span style="color: #dc3545;">↑ +' . number_format(abs($change), 2) . '</span>';
+                    $trend = '<span style="color: #dc3545;">&#9650; ">UP+' . number_format(abs($change), 2) . '</span>';
                 } elseif ($change < 0) {
-                    $trend = '<span style="color: #198754;">↓ -' . number_format(abs($change), 2) . '</span>';
+                    $trend = '<span style="color: #198754;">&#9660; ">DOWN-' . number_format(abs($change), 2) . '</span>';
                 } else {
-                    $trend = '<span style="color: #6c757d;">→ No change</span>';
+                    $trend = '<span style="color: #6c757d;">&#9472; No change</span>';
                 }
             }
             $previousEmission = $record['total'];
@@ -257,7 +257,7 @@ class CarbonFootprintPDF extends TCPDF {
             $html .= '
                 <tr style="background-color: ' . $bgColor . ';">
                     <td style="text-align: center;">' . $record['month'] . '</td>
-                    <td style="text-align: right;"><strong>' . number_format($record['total'], 2) . ' kg CO₂</strong></td>
+                    <td style="text-align: right;"><strong>' . number_format($record['total'], 2) . ' kg CO<sub>2</sub></strong></td>
                     <td style="text-align: center;">
                         <span style="background-color: ' . $levelColor . '; color: white; padding: 3px 8px; border-radius: 3px; font-size: 9px;">
                             ' . $level . '
@@ -437,13 +437,13 @@ function generateCarbonReport($conn, $recordId, $userId) {
     
     // Get history (last 6 months)
     $sql = "SELECT 
-                DATE_FORMAT(record_date, '%b %Y') as month,
+                DATE_FORMAT(MIN(record_date), '%b %Y') as month,
                 SUM(total_carbon_emissions) as total
             FROM emissions_record
             WHERE user_id = ?
             AND record_date >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
-            GROUP BY DATE_FORMAT(record_date, '%Y-%m')
-            ORDER BY record_date DESC";
+            GROUP BY YEAR(record_date), MONTH(record_date)
+            ORDER BY MIN(record_date) DESC";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("i", $userId);
     $stmt->execute();

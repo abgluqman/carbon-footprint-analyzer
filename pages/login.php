@@ -56,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <link href="../assets/css/custom.css" rel="stylesheet">
 </head>
 <body style="
-    background-image: url('../assets/images/landing-page.png');
+    background-image: url('../assets/images/user-login-no.png');
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;

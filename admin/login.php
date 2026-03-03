@@ -56,7 +56,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link href="../assets/css/custom.css" rel="stylesheet">
 </head>
-<body class="bg-light">
+<body style="
+    background-image: url('../assets/images/Admin-background.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;">
     <div class="container">
         <div class="row justify-content-center align-items-center min-vh-100">
             <div class="col-md-5 col-lg-4">

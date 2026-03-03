@@ -1,45 +1,5 @@
 <?php
-
-if (!function_exists('getEmissionLevelAuto')) {
-    function getEmissionLevelAuto($totalEmissions) {
-        // Smart auto-detection based on typical emission ranges
-        if ($totalEmissions <= 0) {
-            return 'Low';
-        }
-        
-        // Daily range: Typically 0-60 kg
-        if ($totalEmissions < 60) {
-            if ($totalEmissions < 10) return 'Low';
-            if ($totalEmissions < 25) return 'Medium';
-            return 'High';
-        }
-        
-        // Weekly range: Typically 60-400 kg
-        if ($totalEmissions < 400) {
-            if ($totalEmissions < 70) return 'Low';
-            if ($totalEmissions < 175) return 'Medium';
-            return 'High';
-        }
-        
-        // Monthly range: Typically 400+ kg
-        if ($totalEmissions < 300) return 'Low';
-        if ($totalEmissions < 750) return 'Medium';
-        return 'High';
-    }
-}
-
-if (!function_exists('detectPeriodFromAmount')) {
-    function detectPeriodFromAmount($totalEmissions) {
-        // Helper function to detect which period based on amount
-        if ($totalEmissions < 60) {
-            return 'daily';
-        } elseif ($totalEmissions < 400) {
-            return 'weekly';
-        } else {
-            return 'monthly';
-        }
-    }
-}
+require_once __DIR__ . '/emissions.php';
 
 function getUserTotalEmissions($conn, $userId) {
     $sql = "SELECT SUM(total_carbon_emissions) as total 
@@ -54,7 +14,8 @@ function getUserTotalEmissions($conn, $userId) {
 }
 
 function getLatestEmissionLevel($conn, $userId) {
-    $sql = "SELECT total_carbon_emissions 
+    //  Fetch period from database and use period-aware calculation
+    $sql = "SELECT total_carbon_emissions, period
             FROM emissions_record 
             WHERE user_id = ? 
             ORDER BY record_date DESC 
@@ -66,7 +27,8 @@ function getLatestEmissionLevel($conn, $userId) {
     $row = $result->fetch_assoc();
     
     if ($row) {
-        return getEmissionLevelAuto($row['total_carbon_emissions']);
+        $period = $row['period'] ?? 'daily'; // Default to daily if not set
+        return getEmissionLevel($row['total_carbon_emissions'], $period);
     }
     return 'N/A';
 }
@@ -90,10 +52,11 @@ function getHighestEmissionCategory($conn, $userId) {
 }
 
 function getEmissionHistory($conn, $userId, $limit = 5) {
-    $sql = "SELECT record_id, record_date, total_carbon_emissions 
+    //  Secondary sort by record_id for same-date records
+    $sql = "SELECT record_id, record_date, total_carbon_emissions, period 
             FROM emissions_record 
             WHERE user_id = ? 
-            ORDER BY record_date DESC 
+            ORDER BY record_date DESC, record_id DESC 
             LIMIT ?";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("ii", $userId, $limit);
@@ -134,7 +97,7 @@ function getCategoryBreakdown($conn, $userId) {
 }
 
 function getPersonalizedTips($conn, $userId) {
-    // Fallback: general tips (no category, no emission level)
+    //  general tips (no category, no emission level)
     $getGeneralTips = function() use ($conn) {
         $stmt = $conn->prepare(
             "SELECT title, description, content_type, NULL as category_name
@@ -154,9 +117,9 @@ function getPersonalizedTips($conn, $userId) {
         return $tips;
     };
 
-    // Get user's latest emission record
+    // Get user's latest emission record with period
     $stmt = $conn->prepare(
-        "SELECT record_id, total_carbon_emissions
+        "SELECT record_id, total_carbon_emissions, period
          FROM emissions_record
          WHERE user_id = ?
          ORDER BY record_date DESC
@@ -170,8 +133,9 @@ function getPersonalizedTips($conn, $userId) {
         return $getGeneralTips();
     }
 
-    // Infer emission level from the latest record's total
-    $level = getEmissionLevelAuto($latestRecord['total_carbon_emissions']);
+    //  Use period-aware emission level calculation
+    $period = $latestRecord['period'] ?? 'daily';
+    $level = getEmissionLevel($latestRecord['total_carbon_emissions'], $period);
 
     // Try to get categories from emissions_details (breakdown per category)
     $stmt = $conn->prepare(
@@ -203,16 +167,14 @@ function getPersonalizedTips($conn, $userId) {
         while ($row = $result->fetch_assoc()) {
             $tips[] = $row;
         }
-        // If still nothing, return general tips
+        // If  nothing, return general tips
         return !empty($tips) ? $tips : $getGeneralTips();
     }
 
-    // We have category breakdown — match tips to highest emission categories
     $tips = [];
     $usedContentIds = []; // prevent duplicate tips
 
     while ($category = $latestCategories->fetch_assoc()) {
-        // Priority 1: tip matching this category AND exact emission level
         $stmt = $conn->prepare(
             "SELECT content_id, title, description, content_type, ? as category_name
              FROM educational_content
@@ -231,7 +193,6 @@ function getPersonalizedTips($conn, $userId) {
             $usedContentIds[] = $row['content_id'];
             $tips[] = $row;
         } else {
-            // Priority 2: tip matching this category with any emission level
             $stmt = $conn->prepare(
                 "SELECT content_id, title, description, content_type, ? as category_name
                  FROM educational_content
@@ -325,7 +286,8 @@ function getPreviousMonthEmissions($conn, $userId) {
 
 function getCurrentMonthLevel($conn, $userId) {
     $currentTotal = getCurrentMonthEmissions($conn, $userId);
-    return getEmissionLevelAuto($currentTotal); // Uses auto-detection
+    //  Use 'monthly' period for current month total
+    return getEmissionLevel($currentTotal, 'monthly');
 }
 
 function getLatestEmissionRecord($conn, $userId) {
@@ -342,17 +304,13 @@ function getLatestEmissionRecord($conn, $userId) {
     
     if ($row) {
         $emissions = $row['total_carbon_emissions'];
-        $allowedPeriods = ['daily', 'weekly', 'monthly'];
-        // Use stored period from DB; fall back to amount-based only for old records without period
-        $period = (!empty($row['period']) && in_array($row['period'], $allowedPeriods))
-            ? $row['period']
-            : detectPeriodFromAmount($emissions);
+        $period = $row['period'] ?? 'daily'; // Use stored period or default to daily
         
         return [
             'emissions' => $emissions,
             'date'      => $row['record_date'],
             'period'    => $period,
-            'level'     => getEmissionLevelAuto($emissions)
+            'level'     => getEmissionLevel($emissions, $period) // ✅ FIXED: Use period-aware calculation
         ];
     }
     

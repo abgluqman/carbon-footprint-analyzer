@@ -10,13 +10,7 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-
-// Matches admin emissions_records.php so both sides always show the same label.
-function calcEmissionLevel(float $val): string {
-    if ($val < 50)  return 'Low';
-    if ($val < 100) return 'Medium';
-    return 'High';
-}
+// ✅ REMOVED: calcEmissionLevel() - now using period-aware getEmissionLevel() from emissions.php
 
 $userId = $_SESSION['user_id'];
 
@@ -229,7 +223,8 @@ while ($row = $categoryBreakdown->fetch_assoc()) {
                                         <small class="text-muted">kg CO₂</small>
                                         
                                         <?php 
-                                        $prevMonthLevel = calcEmissionLevel((float)$previousMonthEmissions);
+                                        // ✅ FIXED: Previous month is always monthly period
+                                        $prevMonthLevel = getEmissionLevel((float)$previousMonthEmissions, 'monthly');
                                         $prevLevelClass = $prevMonthLevel == 'Low' ? 'success' : ($prevMonthLevel == 'Medium' ? 'warning' : 'danger');
                                         ?>
                                         <div class="mt-2">
@@ -384,7 +379,9 @@ while ($row = $categoryBreakdown->fetch_assoc()) {
                                                 <?php 
                                                 $count = 1;
                                                 while ($record = $emissionHistory->fetch_assoc()): 
-                                                    $level = calcEmissionLevel((float)$record['total_carbon_emissions']);
+                                                    //  Use period-aware calculation
+                                                    $period = $record['period'] ?? 'daily';
+                                                    $level = getEmissionLevel((float)$record['total_carbon_emissions'], $period);
                                                     $levelClass = $level == 'Low' ? 'success' : ($level == 'Medium' ? 'warning' : 'danger');
                                                     $safeRecordId = intval($record['record_id']);
 

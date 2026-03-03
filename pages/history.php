@@ -9,12 +9,6 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-function calcEmissionLevel(float $val): string {
-    if ($val < 50)  return 'Low';
-    if ($val < 100) return 'Medium';
-    return 'High';
-}
-
 $userId = $_SESSION['user_id'];
 
 // Generate CSRF token
@@ -41,8 +35,9 @@ $stmt->execute();
 $totalRecords = $stmt->get_result()->fetch_assoc()['total'];
 $totalPages = ceil($totalRecords / $perPage);
 
-// Get emission records with pagination
-$sql = "SELECT * FROM emissions_record 
+// Get emission records with pagination (including period for accurate level calculation)
+$sql = "SELECT record_id, user_id, record_date, total_carbon_emissions, period 
+        FROM emissions_record 
         WHERE user_id = ? 
         ORDER BY record_date DESC 
         LIMIT ? OFFSET ?";
@@ -120,7 +115,9 @@ $records = $stmt->get_result();
                                         <?php 
                                         $modalHtml = ''; // Store modal HTML
                                         while ($record = $records->fetch_assoc()):
-                                            $level = calcEmissionLevel((float)$record['total_carbon_emissions']);
+                                            //  Pass period to getEmissionLevel for accurate thresholds
+                                            $recordPeriod = $record['period'] ?? 'daily'; // Default to daily if not set
+                                            $level = getEmissionLevel((float)$record['total_carbon_emissions'], $recordPeriod);
                                             $levelClass = $level == 'Low' ? 'success' : ($level == 'Medium' ? 'warning' : 'danger');
                                             $safeRecordId = intval($record['record_id']);
                                             
