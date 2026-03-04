@@ -38,14 +38,14 @@ class CarbonFootprintPDF extends TCPDF {
         // Set image scale factor
         $this->setImageScale(PDF_IMAGE_SCALE_RATIO);
         
-        // Set font
-        $this->SetFont('helvetica', '', 10);
+        // Set font - dejavusans supports Unicode symbols like ▲ ▼
+        $this->SetFont('dejavusans', '', 10);
     }
     
     // Page footer
     public function Footer() {
         $this->SetY(-15);
-        $this->SetFont('helvetica', 'I', 8);
+        $this->SetFont('dejavusans', 'I', 8);
         $this->Cell(0, 10, 'Page ' . $this->getAliasNumPage() . '/' . $this->getAliasNbPages(), 0, false, 'C', 0, '', 0, false, 'T', 'M');
         $this->Cell(0, 10, '© ' . date('Y') . ' Carbon Footprint Analyzer', 0, false, 'R', 0, '', 0, false, 'T', 'M');
     }
@@ -74,12 +74,12 @@ class CarbonFootprintPDF extends TCPDF {
     }
     
     private function addUserInfo() {
-        $this->SetFont('helvetica', 'B', 16);
+        $this->SetFont('dejavusans', 'B', 16);
         $this->SetTextColor(25, 135, 84); // Green color
         $this->Cell(0, 10, 'Personal Carbon Footprint Report', 0, 1, 'C');
         $this->Ln(5);
         
-        $this->SetFont('helvetica', '', 10);
+        $this->SetFont('dejavusans', '', 10);
         $this->SetTextColor(0, 0, 0);
         
         $html = '
@@ -108,13 +108,13 @@ class CarbonFootprintPDF extends TCPDF {
     
     private function addSummary() {
         // Section title
-        $this->SetFont('helvetica', 'B', 14);
+        $this->SetFont('dejavusans', 'B', 14);
         $this->SetFillColor(25, 135, 84);
         $this->SetTextColor(255, 255, 255);
         $this->Cell(0, 10, 'Executive Summary', 0, 1, 'L', true);
         $this->Ln(3);
         
-        $this->SetFont('helvetica', '', 10);
+        $this->SetFont('dejavusans', '', 10);
         $this->SetTextColor(0, 0, 0);
         
         $totalEmissions = $this->reportData['total_emissions'];
@@ -153,13 +153,13 @@ class CarbonFootprintPDF extends TCPDF {
     
     private function addDetailedBreakdown() {
         // Section title
-        $this->SetFont('helvetica', 'B', 14);
+        $this->SetFont('dejavusans', 'B', 14);
         $this->SetFillColor(25, 135, 84);
         $this->SetTextColor(255, 255, 255);
         $this->Cell(0, 10, 'Detailed Emissions Breakdown', 0, 1, 'L', true);
         $this->Ln(3);
         
-        $this->SetFont('helvetica', '', 10);
+        $this->SetFont('dejavusans', '', 10);
         $this->SetTextColor(0, 0, 0);
         
         $html = '
@@ -213,13 +213,13 @@ class CarbonFootprintPDF extends TCPDF {
         }
         
         // Section title
-        $this->SetFont('helvetica', 'B', 14);
+        $this->SetFont('dejavusans', 'B', 14);
         $this->SetFillColor(25, 135, 84);
         $this->SetTextColor(255, 255, 255);
         $this->Cell(0, 10, 'Emissions History (Last 6 Months)', 0, 1, 'L', true);
         $this->Ln(3);
         
-        $this->SetFont('helvetica', '', 10);
+        $this->SetFont('dejavusans', '', 10);
         $this->SetTextColor(0, 0, 0);
         
         $html = '
@@ -243,15 +243,20 @@ class CarbonFootprintPDF extends TCPDF {
             // Calculate trend
             $trend = '';
             if ($previousEmission !== null) {
-                $change = $record['total'] - $previousEmission;
-                if ($change > 0) {
-                    $trend = '<span style="color: #dc3545;">&#9650; ">UP+' . number_format(abs($change), 2) . '</span>';
-                } elseif ($change < 0) {
-                    $trend = '<span style="color: #198754;">&#9660; ">DOWN-' . number_format(abs($change), 2) . '</span>';
-                } else {
-                    $trend = '<span style="color: #6c757d;">&#9472; No change</span>';
-                }
-            }
+    $change = $record['total'] - $previousEmission;
+
+    if ($change > 0) {
+        $trend = '<span style="color: #dc3545;">&#9650; +' 
+                 . number_format(abs($change), 2) . 
+                 ' kg CO<sub>2</sub></span>';
+    } elseif ($change < 0) {
+        $trend = '<span style="color: #198754;">&#9660; -' 
+                 . number_format(abs($change), 2) . 
+                 ' kg CO<sub>2</sub></span>';
+    } else {
+        $trend = '<span style="color: #6c757d;">&#9472; No change</span>';
+    }
+}
             $previousEmission = $record['total'];
             
             $html .= '
@@ -277,13 +282,13 @@ class CarbonFootprintPDF extends TCPDF {
     
     private function addRecommendations() {
         // Section title
-        $this->SetFont('helvetica', 'B', 14);
+        $this->SetFont('dejavusans', 'B', 14);
         $this->SetFillColor(25, 135, 84);
         $this->SetTextColor(255, 255, 255);
         $this->Cell(0, 10, 'Personalized Recommendations', 0, 1, 'L', true);
         $this->Ln(3);
         
-        $this->SetFont('helvetica', '', 10);
+        $this->SetFont('dejavusans', '', 10);
         $this->SetTextColor(0, 0, 0);
         
         $recommendations = $this->generateRecommendations();
@@ -300,15 +305,14 @@ class CarbonFootprintPDF extends TCPDF {
     }
     
     private function addFooterNote() {
-        $this->SetFont('helvetica', 'I', 9);
+        $this->SetFont('dejavusans', 'I', 9);
         $this->SetTextColor(108, 117, 125);
         
         $html = '
         <div style="border-top: 1px solid #dee2e6; padding-top: 10px; margin-top: 20px;">
             <p style="text-align: center; color: #6c757d;">
                 <strong>Note:</strong> This report is generated based on your input data and standard emission factors. 
-                The calculations are estimates and actual emissions may vary. For questions or concerns, 
-                please contact the sustainability team.
+                The calculations are estimates and actual emissions may vary. 
             </p>
         </div>';
         

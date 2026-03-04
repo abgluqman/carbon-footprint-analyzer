@@ -10,11 +10,9 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-// ✅ REMOVED: calcEmissionLevel() - now using period-aware getEmissionLevel() from emissions.php
 
 $userId = $_SESSION['user_id'];
 
-// Generate CSRF token for destructive actions (e.g. delete record)
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
@@ -41,14 +39,12 @@ if ($previousMonthEmissions > 0) {
     $monthTrend = $monthChange > 0 ? 'up' : 'down';
 }
 
-// Get total records count — use prepared statement to prevent SQL injection
 $totalRecordsStmt = $conn->prepare("SELECT COUNT(*) as total FROM emissions_record WHERE user_id = ?");
 $totalRecordsStmt->bind_param("i", $userId);
 $totalRecordsStmt->execute();
 $totalRecords = $totalRecordsStmt->get_result()->fetch_assoc()['total'];
 
-// Prepare data for Chart.js
-// Build a lookup of month => total from the query results
+//  data for Chart.js
 $trendFromDb = [];
 while ($row = $monthlyTrend->fetch_assoc()) {
     $trendFromDb[$row['month']] = round($row['total'], 2);
@@ -223,7 +219,6 @@ while ($row = $categoryBreakdown->fetch_assoc()) {
                                         <small class="text-muted">kg CO₂</small>
                                         
                                         <?php 
-                                        // ✅ FIXED: Previous month is always monthly period
                                         $prevMonthLevel = getEmissionLevel((float)$previousMonthEmissions, 'monthly');
                                         $prevLevelClass = $prevMonthLevel == 'Low' ? 'success' : ($prevMonthLevel == 'Medium' ? 'warning' : 'danger');
                                         ?>
@@ -472,7 +467,6 @@ while ($row = $categoryBreakdown->fetch_assoc()) {
                                                                 <a href="report.php?id=<?php echo $safeRecordId; ?>&amp;download=1" class="btn btn-sm btn-outline-success">
                                                                     <i class="bi bi-download"></i> Download
                                                                 </a>
-                                                                <!-- CSRF-protected delete form instead of bare GET link -->
                                                                 <form method="POST" action="delete_record.php" style="display:inline;"
                                                                       onsubmit="return confirm('Are you sure you want to delete this record?');">
                                                                     <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8'); ?>">
@@ -678,9 +672,8 @@ while ($row = $categoryBreakdown->fetch_assoc()) {
             }
         }, true); // Use capture phase
         
-        // Click handler for sidebar collapse (only on main content area)
+        
         function handleOutsideClick(e) {
-            // NEVER run if modal is open or opening
             if (isModalOpen || modalOpeningInProgress) return;
 
             // Only collapse sidebar when clicking on safe areas
@@ -704,7 +697,6 @@ while ($row = $categoryBreakdown->fetch_assoc()) {
             document.addEventListener('touchstart', handleOutsideClick);
         }, 100);
         
-        // Monitor all modals for open/close state
         const modals = document.querySelectorAll('.modal');
         modals.forEach(modal => {
             modal.addEventListener('show.bs.modal', function() {
@@ -726,9 +718,7 @@ while ($row = $categoryBreakdown->fetch_assoc()) {
         
         initSidebar();
 
-        // MANUAL MODAL CONTROL - same as history.php
         document.addEventListener('DOMContentLoaded', function() {
-            // Clean up any stuck modal states on load
             const backdrops = document.querySelectorAll('.modal-backdrop');
             if (backdrops.length > 0 && !document.querySelector('.modal.show')) {
                 document.body.classList.remove('modal-open');
