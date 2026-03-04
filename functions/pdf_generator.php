@@ -141,10 +141,6 @@ class CarbonFootprintPDF extends TCPDF {
                 <td style="font-weight: bold;">Highest Emission Category</td>
                 <td style="text-align: right;">' . htmlspecialchars($this->reportData['highest_category']) . '</td>
             </tr>
-            <tr>
-                <td style="font-weight: bold;">Carbon Offset Equivalent</td>
-                <td style="text-align: right;">' . $this->getTreeEquivalent($totalEmissions) . ' trees needed for 1 year</td>
-            </tr>
         </table>';
         
         $this->writeHTML($html, true, false, true, false, '');
@@ -333,11 +329,7 @@ class CarbonFootprintPDF extends TCPDF {
             default: return '#6c757d';
         }
     }
-    
-    private function getTreeEquivalent($emissions) {
-        // Average tree absorbs ~22 kg of CO2 per year
-        return ceil($emissions / 22);
-    }
+
     
     private function generateRecommendations() {
         $recommendations = [];
