@@ -1,4 +1,4 @@
-Here's your admin/content_edit.php with complete error handling and logging:
+
 php<?php
 session_start();
 require_once '../config/db_connection.php';
