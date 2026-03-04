@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once '../config/db_connection.php';
+require_once '../functions/error_handler.php';
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $name = trim($_POST['name']);
@@ -18,34 +19,103 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $errors[] = "Password must be at least 8 characters";
     if (empty($department)) $errors[] = "Department is required";
     
-    //  Check if email exists using prepared statement
-    $check_email = "SELECT email FROM user WHERE email = ?";
-    $stmt = $conn->prepare($check_email);
-    $stmt->bind_param("s", $email);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    
-    if ($result->num_rows > 0) {
-        $errors[] = "Email already registered";
-    }
-    
     if (empty($errors)) {
-        //  Hash password
-        $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-        
-        //  using prepared statement
-        $sql = "INSERT INTO user (name, email, password, department) 
-                VALUES (?, ?, ?, ?)";
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param("ssss", $name, $email, $hashed_password, $department);
-        
-        if ($stmt->execute()) {
-            $_SESSION['success'] = "Registration successful! Please login.";
-            header("Location: login.php");
-            exit();
-        } else {
-            $errors[] = "Registration failed. Please try again.";
+        try {
+            // Check if email exists using prepared statement
+            $check_email = "SELECT email FROM user WHERE email = ?";
+            $stmt = $conn->prepare($check_email);
+            
+            if (!$stmt) {
+                logError("Failed to prepare email check query", [
+                    'error' => $conn->error,
+                    'email' => $email
+                ]);
+                $errors[] = "System error. Please try again later.";
+            } else {
+                $stmt->bind_param("s", $email);
+                
+                if (!$stmt->execute()) {
+                    logError("Failed to execute email check query", [
+                        'error' => $stmt->error,
+                        'email' => $email
+                    ]);
+                    $errors[] = "System error. Please try again later.";
+                } else {
+                    $result = $stmt->get_result();
+                    
+                    if ($result->num_rows > 0) {
+                        $errors[] = "Email already registered";
+                        logSecurity('REGISTRATION_DUPLICATE_EMAIL', "Email: $email");
+                    }
+                }
+                
+                $stmt->close();
+            }
+            
+            if (empty($errors)) {
+                // Hash password
+                $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+                
+                if (!$hashed_password) {
+                    logError("Password hashing failed", ['email' => $email]);
+                    $errors[] = "System error. Please try again later.";
+                } else {
+                    // Insert using prepared statement
+                    $sql = "INSERT INTO user (name, email, password, department) 
+                            VALUES (?, ?, ?, ?)";
+                    $stmt = $conn->prepare($sql);
+                    
+                    if (!$stmt) {
+                        logError("Failed to prepare registration query", [
+                            'error' => $conn->error,
+                            'email' => $email
+                        ]);
+                        $errors[] = "Registration failed. Please try again.";
+                    } else {
+                        $stmt->bind_param("ssss", $name, $email, $hashed_password, $department);
+                        
+                        if ($stmt->execute()) {
+                            $newUserId = $stmt->insert_id;
+                            
+                            logActivity($newUserId, 'USER_REGISTERED', "Name: $name, Email: $email, Department: $department");
+                            
+                            $_SESSION['success'] = "Registration successful! Please login.";
+                            header("Location: login.php");
+                            exit();
+                        } else {
+                            $errorCode = $stmt->errno;
+                            $errorMsg = $stmt->error;
+                            
+                            logError("Registration INSERT failed", [
+                                'error_code' => $errorCode,
+                                'error_msg' => $errorMsg,
+                                'email' => $email,
+                                'name' => $name,
+                                'department' => $department
+                            ]);
+                            
+                            if ($errorCode == 1062) { // Duplicate entry
+                                $errors[] = "Email already registered";
+                            } else {
+                                $errors[] = "Registration failed. Please try again.";
+                            }
+                        }
+                        
+                        $stmt->close();
+                    }
+                }
+            }
+            
+        } catch (Exception $e) {
+            logError("Registration exception occurred", [
+                'error' => $e->getMessage(),
+                'email' => $email,
+                'trace' => $e->getTraceAsString()
+            ]);
+            $errors[] = "An unexpected error occurred. Please try again.";
         }
+    } else {
+        logSecurity('REGISTRATION_VALIDATION_FAILED', "Email: $email, Errors: " . implode(', ', $errors));
     }
 }
 ?>

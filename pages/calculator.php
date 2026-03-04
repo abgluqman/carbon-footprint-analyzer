@@ -2,6 +2,7 @@
 session_start();
 require_once '../config/db_connection.php';
 require_once '../functions/emissions.php';
+require_once '../functions/error_handler.php';
 
 // Check authentication
 if (!isset($_SESSION['user_id'])) {
@@ -24,31 +25,36 @@ $period = isset($_GET['period']) && in_array($_GET['period'], $allowedPeriods)
     : 'daily';
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    // CSRF validation
     if (!isset($_POST['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+        logSecurity('CSRF_VIOLATION_CALCULATOR', 'User ID: ' . $_SESSION['user_id']);
         http_response_code(403);
         die('Invalid CSRF token.');
     }
 
     $emissionsData = [];
+    $userId = $_SESSION['user_id'];
 
     // Whitelist period from POST
     $period = isset($_POST['period']) && in_array($_POST['period'], $allowedPeriods)
         ? $_POST['period']
         : 'daily';
 
-    // Validate date format (YYYY-MM-DD) and ensure not in future
     $recordDateRaw = $_POST['record_date'] ?? date('Y-m-d');
     $parsedDate = DateTime::createFromFormat('Y-m-d', $recordDateRaw);
     $recordDate = ($parsedDate && $parsedDate->format('Y-m-d') === $recordDateRaw && $recordDateRaw <= date('Y-m-d'))
         ? $recordDateRaw
         : date('Y-m-d');
 
+    if ($recordDateRaw !== $recordDate) {
+        logSecurity('INVALID_DATE_SUBMITTED', "User: $userId, Submitted: $recordDateRaw, Used: $recordDate");
+    }
+
     // Electricity
     if (!empty($_POST['electricity_kwh'])) {
         $kwh = floatval($_POST['electricity_kwh']);
         if ($kwh < 0 || $kwh > 1000000) {
             $errors[] = "Invalid electricity value.";
+            logSecurity('INVALID_INPUT_ELECTRICITY', "User: $userId, Value: $kwh");
         } else {
             $emissionsData[] = [
                 'category_id' => 1,
@@ -66,6 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             ? $_POST['fuel_type'] : 'petrol';
         if ($liters < 0 || $liters > 100000) {
             $errors[] = "Invalid fuel value.";
+            logSecurity('INVALID_INPUT_FUEL', "User: $userId, Value: $liters");
         } else {
             $emissionsData[] = [
                 'category_id' => 2,
@@ -80,6 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $liters = floatval($_POST['water_liters']);
         if ($liters < 0 || $liters > 1000000) {
             $errors[] = "Invalid water value.";
+            logSecurity('INVALID_INPUT_WATER', "User: $userId, Value: $liters");
         } else {
             $emissionsData[] = [
                 'category_id' => 3,
@@ -97,6 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             ? $_POST['waste_type'] : 'non-recyclable';
         if ($kg < 0 || $kg > 100000) {
             $errors[] = "Invalid waste value.";
+            logSecurity('INVALID_INPUT_WASTE', "User: $userId, Value: $kg");
         } else {
             $emissionsData[] = [
                 'category_id' => 4,
@@ -111,6 +120,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $pages = intval($_POST['paper_pages']);
         if ($pages < 0 || $pages > 100000) {
             $errors[] = "Invalid paper value.";
+            logSecurity('INVALID_INPUT_PAPER', "User: $userId, Value: $pages");
         } else {
             $emissionsData[] = [
                 'category_id' => 5,
@@ -128,6 +138,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             ? $_POST['food_type'] : 'meat';
         if ($meals < 0 || $meals > 10000) {
             $errors[] = "Invalid food value.";
+            logSecurity('INVALID_INPUT_FOOD', "User: $userId, Value: $meals");
         } else {
             $emissionsData[] = [
                 'category_id' => 6,
@@ -138,14 +149,47 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 
     if (!empty($emissionsData) && empty($errors)) {
-        $recordId = saveEmissionsRecord($conn, $_SESSION['user_id'], $emissionsData, $period, $recordDate);
-        $success = "Emissions calculated and saved successfully!";
-
-        // Redirect to dashboard
-        header("Location: dashboard.php?success=1");
-        exit();
+        try {
+            $recordId = saveEmissionsRecord($conn, $userId, $emissionsData, $period, $recordDate);
+            
+            if (!$recordId) {
+                logError("Failed to save emission record", [
+                    'user_id' => $userId,
+                    'period' => $period,
+                    'date' => $recordDate,
+                    'categories' => count($emissionsData)
+                ]);
+                $errors[] = "Failed to save your emissions data. Please try again.";
+            } else {
+                $totalEmissions = array_sum(array_column($emissionsData, 'emissions'));
+                
+                logActivity($userId, 'EMISSION_ADDED', sprintf(
+                    "Period: %s, Date: %s, Total: %.2f kg, Categories: %d",
+                    $period,
+                    $recordDate,
+                    $totalEmissions,
+                    count($emissionsData)
+                ));
+                
+                $success = "Emissions calculated and saved successfully!";
+                
+                // Redirect to dashboard
+                header("Location: dashboard.php?success=1");
+                exit();
+            }
+            
+        } catch (Exception $e) {
+            logError("Exception while saving emission record", [
+                'user_id' => $userId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            $errors[] = "An error occurred while saving your data. Please try again.";
+        }
+        
     } elseif (empty($emissionsData) && empty($errors)) {
         $errors[] = "Please enter at least one consumption value";
+        logActivity($userId, 'EMISSION_SUBMIT_EMPTY', "No data entered");
     }
 }
 ?>

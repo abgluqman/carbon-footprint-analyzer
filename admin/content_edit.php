@@ -1,37 +1,69 @@
-<?php
+Here's your admin/content_edit.php with complete error handling and logging:
+php<?php
 session_start();
 require_once '../config/db_connection.php';
 require_once 'auth_check.php';
+require_once '../functions/error_handler.php';
 
-// ✅ SECURITY: Generate CSRF token
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
 
-$contentId = isset($_GET['id']) ? intval($_GET['id']) : 0;
 $errors = [];
 $success = '';
+$adminId = $_SESSION['admin_id'] ?? null;
+
+//  Get and validate content ID
+$contentId = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
 if ($contentId <= 0) {
-    header("Location: content.php");
-    exit();
+    logSecurity('INVALID_CONTENT_ID_ACCESS', "Admin: $adminId, ID: " . ($_GET['id'] ?? 'none'));
+    die('Invalid content ID');
 }
 
-// Get existing content
-$sql = "SELECT * FROM educational_content WHERE content_id = ?";
-$stmt = $conn->prepare($sql);
-$stmt->bind_param("i", $contentId);
-$stmt->execute();
-$content = $stmt->get_result()->fetch_assoc();
-
-if (!$content) {
-    header("Location: content.php");
-    exit();
+try {
+    $sql = "SELECT * FROM educational_content WHERE content_id = ?";
+    $stmt = $conn->prepare($sql);
+    
+    if (!$stmt) {
+        logError("Failed to prepare SELECT content", [
+            'error' => $conn->error,
+            'content_id' => $contentId
+        ]);
+        die('Database error occurred');
+    }
+    
+    $stmt->bind_param("i", $contentId);
+    
+    if (!$stmt->execute()) {
+        logError("Failed to execute SELECT content", [
+            'error' => $stmt->error,
+            'content_id' => $contentId
+        ]);
+        die('Database error occurred');
+    }
+    
+    $result = $stmt->get_result();
+    $content = $result->fetch_assoc();
+    $stmt->close();
+    
+    if (!$content) {
+        logSecurity('CONTENT_NOT_FOUND', "Admin: $adminId, ID: $contentId");
+        die('Content not found');
+    }
+    
+} catch (Exception $e) {
+    logError("Exception fetching content", [
+        'error' => $e->getMessage(),
+        'content_id' => $contentId
+    ]);
+    die('An error occurred');
 }
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    // ✅ SECURITY: Validate CSRF token
-    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+    // CSRF validation
+    if (!isset($_POST['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+        logSecurity('CSRF_VIOLATION_CONTENT_EDIT', "Admin: $adminId, Content: $contentId");
         die('CSRF token validation failed. Please refresh the page and try again.');
     }
     
@@ -45,110 +77,235 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (empty($title)) $errors[] = "Title is required";
     if (strlen($title) > 150) $errors[] = "Title must be 150 characters or less";
     if (empty($description)) $errors[] = "Description is required";
+    if (strlen($description) > 10000) $errors[] = "Description must be 10,000 characters or less";
     if (empty($contentType)) $errors[] = "Content type is required";
     
-    // ✅ SECURITY: Validate content_type against whitelist
+    //  Validate content_type/emissions_level against whitelist
     $allowedContentTypes = ['tip', 'article', 'video'];
     if (!in_array($contentType, $allowedContentTypes)) {
         $errors[] = "Invalid content type";
+        logSecurity('INVALID_CONTENT_TYPE_EDIT', "Admin: $adminId, Content: $contentId, Attempted: $contentType");
     }
-    
-    // ✅ SECURITY: Validate emissions_level against whitelist
+ 
     if ($emissionsLevel !== null) {
         $allowedLevels = ['Low', 'Medium', 'High'];
         if (!in_array($emissionsLevel, $allowedLevels)) {
             $errors[] = "Invalid emissions level";
+            logSecurity('INVALID_EMISSIONS_LEVEL_EDIT', "Admin: $adminId, Content: $contentId, Attempted: $emissionsLevel");
         }
     }
     
-    // Handle image removal request
-    $removeImage = isset($_POST['remove_image']) && $_POST['remove_image'] == '1';
-
-    // Handle image upload
-    $updateImage = false;
+    //  Handle image upload with comprehensive error handling
     $imageData = null;
+    $updateImage = false;
     
     if (isset($_FILES['content_image']) && $_FILES['content_image']['error'] == 0) {
-        $allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
-
-        // Determine safe max size based on MySQL server's max_allowed_packet
+        // Determine safe max size
         $mysqlMax = null;
         $res = $conn->query("SHOW VARIABLES LIKE 'max_allowed_packet'");
         if ($res) {
             $row = $res->fetch_assoc();
             $mysqlMax = isset($row['Value']) ? intval($row['Value']) : null;
+        } else {
+            logError("Failed to get max_allowed_packet", ['error' => $conn->error]);
         }
 
-        $defaultMax = 5 * 1024 * 1024; // 5MB
+        $defaultMax = 16 * 1024 * 1024;
+
+        $columnMax = null;
+        $colRes = $conn->query("SELECT DATA_TYPE, CHARACTER_MAXIMUM_LENGTH
+                                FROM information_schema.COLUMNS
+                                WHERE TABLE_SCHEMA = DATABASE()
+                                  AND TABLE_NAME   = 'educational_content'
+                                  AND COLUMN_NAME  = 'content_image'");
+        if ($colRes && $colRow = $colRes->fetch_assoc()) {
+            switch (strtolower($colRow['DATA_TYPE'])) {
+                case 'tinyblob':   $columnMax =        255; break;
+                case 'blob':       $columnMax =     65535; break;
+                case 'mediumblob': $columnMax =  16777215; break;
+                case 'longblob':   $columnMax = null;      break;
+            }
+        } else {
+            logError("Failed to get column info for content_image", ['error' => $conn->error]);
+        }
+
+        $maxSize = $defaultMax;
         if ($mysqlMax && $mysqlMax > 2048) {
-            $maxSize = min($defaultMax, max(1024, $mysqlMax - 1024));
-        } else {
-            $maxSize = $defaultMax;
+            $maxSize = min($maxSize, max(1024, $mysqlMax - 1024));
+        }
+        if ($columnMax !== null) {
+            $maxSize = min($maxSize, $columnMax);
         }
 
-        // ✅ SECURITY: Additional file validation
-        $finfo = finfo_open(FILEINFO_MIME_TYPE);
-        $mimeType = finfo_file($finfo, $_FILES['content_image']['tmp_name']);
-        // Note: finfo_close() is deprecated in PHP 8.3+, resource is auto-closed
-        
+        // Use finfo for MIME type detection
         $allowedMimes = ['image/jpeg', 'image/png', 'image/gif'];
+        $finfo = new finfo(FILEINFO_MIME_TYPE);
+        $mimeType = $finfo->file($_FILES['content_image']['tmp_name']);
+        $imageInfo = @getimagesize($_FILES['content_image']['tmp_name']);
 
-        if (!in_array($_FILES['content_image']['type'], $allowedTypes) || !in_array($mimeType, $allowedMimes)) {
-            $errors[] = "Only JPG, PNG, and GIF images are allowed";
+        if (!in_array($mimeType, $allowedMimes) || $imageInfo === false) {
+            $errors[] = "Only valid JPG, PNG, and GIF images are allowed";
+            logSecurity('INVALID_IMAGE_UPLOAD_EDIT', "Admin: $adminId, Content: $contentId, MIME: $mimeType");
         } elseif ($_FILES['content_image']['size'] > $maxSize) {
-            $errors[] = "Image is too large. Maximum allowed by server: " . round($maxSize / 1024) . " KB. Please resize before uploading.";
+            $limitKB = round($maxSize / 1024);
+            $errors[] = "Image is too large (limit: {$limitKB} KB)";
+            logSecurity('OVERSIZED_IMAGE_UPLOAD_EDIT', sprintf(
+                "Admin: %s, Content: %d, Size: %.2f KB, Limit: %.2f KB",
+                $adminId,
+                $contentId,
+                $_FILES['content_image']['size'] / 1024,
+                $maxSize / 1024
+            ));
         } else {
-            $imageData = file_get_contents($_FILES['content_image']['tmp_name']);
-            $updateImage = true;
+            $imageData = @file_get_contents($_FILES['content_image']['tmp_name']);
+            if ($imageData === false) {
+                $errors[] = "Failed to read uploaded image";
+                logError("Failed to read uploaded image file", [
+                    'admin_id' => $adminId,
+                    'content_id' => $contentId,
+                    'tmp_name' => $_FILES['content_image']['tmp_name']
+                ]);
+                $imageData = null;
+            } else {
+                $updateImage = true;
+            }
         }
+    } elseif (isset($_FILES['content_image']) && $_FILES['content_image']['error'] != 4) {
+        //  file upload errors
+        $uploadErrors = [
+            UPLOAD_ERR_INI_SIZE => 'File exceeds upload_max_filesize',
+            UPLOAD_ERR_FORM_SIZE => 'File exceeds MAX_FILE_SIZE',
+            UPLOAD_ERR_PARTIAL => 'File was only partially uploaded',
+            UPLOAD_ERR_NO_TMP_DIR => 'Missing temporary folder',
+            UPLOAD_ERR_CANT_WRITE => 'Failed to write file to disk',
+            UPLOAD_ERR_EXTENSION => 'Upload stopped by extension'
+        ];
+        
+        $errorCode = $_FILES['content_image']['error'];
+        $errorMsg = $uploadErrors[$errorCode] ?? "Unknown error ($errorCode)";
+        $errors[] = "Image upload failed: $errorMsg";
+        
+        logError("Image upload failed during edit", [
+            'admin_id' => $adminId,
+            'content_id' => $contentId,
+            'error_code' => $errorCode,
+            'error_msg' => $errorMsg
+        ]);
     }
     
+    // Only proceed if validation passed
     if (empty($errors)) {
-        if ($updateImage) {
-            // New image uploaded — replace existing
-            $sql = "UPDATE educational_content 
-                    SET category_id = ?, title = ?, description = ?, 
-                        content_type = ?, emissions_level = ?, content_image = ?
-                    WHERE content_id = ?";
-            $stmt = $conn->prepare($sql);
-            $stmt->bind_param("isssssi", $categoryId, $title, $description, 
-                            $contentType, $emissionsLevel, $imageData, $contentId);
-        } elseif ($removeImage) {
-            // Remove image — set to NULL
-            $sql = "UPDATE educational_content 
-                    SET category_id = ?, title = ?, description = ?, 
-                        content_type = ?, emissions_level = ?, content_image = NULL
-                    WHERE content_id = ?";
-            $stmt = $conn->prepare($sql);
-            $stmt->bind_param("issssi", $categoryId, $title, $description, 
-                            $contentType, $emissionsLevel, $contentId);
-        } else {
-            // No image change — keep existing
-            $sql = "UPDATE educational_content 
-                    SET category_id = ?, title = ?, description = ?, 
-                        content_type = ?, emissions_level = ?
-                    WHERE content_id = ?";
-            $stmt = $conn->prepare($sql);
-            $stmt->bind_param("issssi", $categoryId, $title, $description, 
-                            $contentType, $emissionsLevel, $contentId);
+        try {
+            if ($updateImage) {
+                $sql = "UPDATE educational_content 
+                        SET category_id = ?, title = ?, description = ?, 
+                            content_type = ?, emissions_level = ?, content_image = ?
+                        WHERE content_id = ?";
+                $stmt = $conn->prepare($sql);
+                
+                if (!$stmt) {
+                    logError("Failed to prepare UPDATE with image", [
+                        'error' => $conn->error,
+                        'content_id' => $contentId
+                    ]);
+                    $errors[] = "Failed to update content. Please try again.";
+                } else {
+                    $stmt->bind_param("isssssi", $categoryId, $title, $description, 
+                                     $contentType, $emissionsLevel, $imageData, $contentId);
+                }
+            } else {
+                $sql = "UPDATE educational_content 
+                        SET category_id = ?, title = ?, description = ?, 
+                            content_type = ?, emissions_level = ?
+                        WHERE content_id = ?";
+                $stmt = $conn->prepare($sql);
+                
+                if (!$stmt) {
+                    logError("Failed to prepare UPDATE without image", [
+                        'error' => $conn->error,
+                        'content_id' => $contentId
+                    ]);
+                    $errors[] = "Failed to update content. Please try again.";
+                } else {
+                    $stmt->bind_param("issssi", $categoryId, $title, $description, 
+                                     $contentType, $emissionsLevel, $contentId);
+                }
+            }
+
+            // Execute with error handling
+            if (isset($stmt) && $stmt) {
+                if ($stmt->execute()) {
+                    logActivity($adminId, 'CONTENT_UPDATED', sprintf(
+                        "ID: %d, Title: %s, Type: %s, Category: %s, Level: %s, Image Updated: %s",
+                        $contentId,
+                        substr($title, 0, 50),
+                        $contentType,
+                        $categoryId ?? 'none',
+                        $emissionsLevel ?? 'none',
+                        $updateImage ? 'yes' : 'no'
+                    ));
+                    
+                    $success = "Content updated successfully!";
+                    
+                    $refreshStmt = $conn->prepare("SELECT * FROM educational_content WHERE content_id = ?");
+                    if ($refreshStmt) {
+                        $refreshStmt->bind_param("i", $contentId);
+                        $refreshStmt->execute();
+                        $content = $refreshStmt->get_result()->fetch_assoc();
+                        $refreshStmt->close();
+                    }
+                } else {
+                    logError("Failed to execute UPDATE educational_content", [
+                        'error' => $stmt->error,
+                        'errno' => $stmt->errno,
+                        'admin_id' => $adminId,
+                        'content_id' => $contentId,
+                        'title' => $title
+                    ]);
+                    $errors[] = "Failed to update content. Please try again.";
+                }
+                
+                $stmt->close();
+            }
+            
+        } catch (mysqli_sql_exception $e) {
+            if (str_contains($e->getMessage(), 'Data too long')) {
+                $errors[] = "Image is too large for the database column.";
+                logError("Image too large for database column during edit", [
+                    'admin_id' => $adminId,
+                    'content_id' => $contentId,
+                    'error' => $e->getMessage(),
+                    'image_size' => $imageData ? strlen($imageData) : 0
+                ]);
+            } else {
+                $errors[] = "Database error: " . htmlspecialchars($e->getMessage());
+                logError("Exception while updating content", [
+                    'admin_id' => $adminId,
+                    'content_id' => $contentId,
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ]);
+            }
         }
-        
-        if ($stmt->execute()) {
-            $success = "Content updated successfully!";
-            // Refresh content data
-            $stmt = $conn->prepare("SELECT * FROM educational_content WHERE content_id = ?");
-            $stmt->bind_param("i", $contentId);
-            $stmt->execute();
-            $content = $stmt->get_result()->fetch_assoc();
-        } else {
-            $errors[] = "Failed to update content. Please try again.";
-        }
+    } else {
+        logActivity($adminId, 'CONTENT_EDIT_VALIDATION_FAILED', 
+                   "Content: $contentId, Errors: " . implode(', ', $errors));
     }
 }
 
-// Get categories
-$categories = $conn->query("SELECT category_id, category_name FROM emissions_category ORDER BY category_name");
+try {
+    $categories = $conn->query("SELECT category_id, category_name FROM emissions_category ORDER BY category_name");
+    
+    if (!$categories) {
+        logError("Failed to fetch categories for edit", ['error' => $conn->error]);
+        $categories = null;
+    }
+} catch (Exception $e) {
+    logError("Exception fetching categories for edit", ['error' => $e->getMessage()]);
+    $categories = null;
+}
 ?>
+
 
 <!DOCTYPE html>
 <html lang="en">

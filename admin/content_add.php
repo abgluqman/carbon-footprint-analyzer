@@ -2,7 +2,7 @@
 session_start();
 require_once '../config/db_connection.php';
 require_once 'auth_check.php';
-
+require_once '../functions/error_handler.php';
 
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
@@ -10,9 +10,12 @@ if (empty($_SESSION['csrf_token'])) {
 
 $errors = [];
 $success = '';
+$adminId = $_SESSION['admin_id'] ?? null;
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    // CSRF validation
     if (!isset($_POST['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+        logSecurity('CSRF_VIOLATION_CONTENT_ADD', 'Admin ID: ' . ($adminId ?? 'unknown'));
         die('CSRF token validation failed. Please refresh the page and try again.');
     }
     
@@ -21,7 +24,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $contentType = $_POST['content_type'];
     $emissionsLevel = !empty($_POST['emissions_level']) ? $_POST['emissions_level'] : null;
     $categoryId = !empty($_POST['category_id']) ? intval($_POST['category_id']) : null;
-    $adminId = $_SESSION['admin_id'];
     
     // Validation
     if (empty($title)) $errors[] = "Title is required";
@@ -30,34 +32,38 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (strlen($description) > 10000) $errors[] = "Description must be 10,000 characters or less";
     if (empty($contentType)) $errors[] = "Content type is required";
     
-    //  Validate content_type/emissions_level against whitelist
+    // Validate content_type/emissions_level against whitelist
     $allowedContentTypes = ['tip', 'article', 'video'];
     if (!in_array($contentType, $allowedContentTypes)) {
         $errors[] = "Invalid content type";
+        logSecurity('INVALID_CONTENT_TYPE', "Admin: $adminId, Attempted: $contentType");
     }
  
     if ($emissionsLevel !== null) {
         $allowedLevels = ['Low', 'Medium', 'High'];
         if (!in_array($emissionsLevel, $allowedLevels)) {
             $errors[] = "Invalid emissions level";
+            // invalid level attempt
+            logSecurity('INVALID_EMISSIONS_LEVEL', "Admin: $adminId, Attempted: $emissionsLevel");
         }
     }
     
     // Handle image upload
     $imageData = null;
     if (isset($_FILES['content_image']) && $_FILES['content_image']['error'] == 0) {
-
-        // Determine safe max size based on MySQL server's max_allowed_packet
         $mysqlMax = null;
         $res = $conn->query("SHOW VARIABLES LIKE 'max_allowed_packet'");
         if ($res) {
             $row = $res->fetch_assoc();
             $mysqlMax = isset($row['Value']) ? intval($row['Value']) : null;
+        } else {
+            //  query failure
+            logError("Failed to get max_allowed_packet", ['error' => $conn->error]);
         }
 
         $defaultMax = 16 * 1024 * 1024; 
 
-        
+        //  column max size
         $columnMax = null;
         $colRes = $conn->query("SELECT DATA_TYPE, CHARACTER_MAXIMUM_LENGTH
                                 FROM information_schema.COLUMNS
@@ -71,9 +77,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 case 'mediumblob': $columnMax =  16777215; break;
                 case 'longblob':   $columnMax = null;      break; // no practical limit
             }
+        } else {
+            //  query failure
+            logError("Failed to get column info for content_image", ['error' => $conn->error]);
         }
 
-        // Use the most restrictive limit: defaultMax vs max_allowed_packet vs column capacity
+        // Use the most restrictive limit
         $maxSize = $defaultMax;
         if ($mysqlMax && $mysqlMax > 2048) {
             $maxSize = min($maxSize, max(1024, $mysqlMax - 1024));
@@ -82,55 +91,149 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $maxSize = min($maxSize, $columnMax);
         }
 
-        //  Use finfo ONLY (not browser-supplied $_FILES['type'] which is spoofable)
+        //  Use finfo ONLY (not browser-supplied type which is spoofable)
         $allowedMimes = ['image/jpeg', 'image/png', 'image/gif'];
         $finfo = new finfo(FILEINFO_MIME_TYPE);
         $mimeType = $finfo->file($_FILES['content_image']['tmp_name']);
 
-        
+        // Verify  an image
         $imageInfo = @getimagesize($_FILES['content_image']['tmp_name']);
 
         if (!in_array($mimeType, $allowedMimes) || $imageInfo === false) {
             $errors[] = "Only valid JPG, PNG, and GIF images are allowed";
+            // invalid file type attempt
+            logSecurity('INVALID_IMAGE_UPLOAD', "Admin: $adminId, MIME: $mimeType, Original: {$_FILES['content_image']['type']}");
         } elseif ($_FILES['content_image']['size'] > $maxSize) {
             $limitKB = round($maxSize / 1024);
             $errors[] = "Image is too large (limit: {$limitKB} KB). "
                       . "If you need larger images, run this SQL on your database: "
                       . "ALTER TABLE educational_content MODIFY content_image LONGBLOB;";
+            //  oversized upload attempt
+            logSecurity('OVERSIZED_IMAGE_UPLOAD', sprintf(
+                "Admin: %s, Size: %.2f KB, Limit: %.2f KB",
+                $adminId,
+                $_FILES['content_image']['size'] / 1024,
+                $maxSize / 1024
+            ));
         } else {
-            $imageData = file_get_contents($_FILES['content_image']['tmp_name']);
+            $imageData = @file_get_contents($_FILES['content_image']['tmp_name']);
+            if ($imageData === false) {
+                $errors[] = "Failed to read uploaded image";
+                logError("Failed to read uploaded image file", [
+                    'admin_id' => $adminId,
+                    'tmp_name' => $_FILES['content_image']['tmp_name']
+                ]);
+                $imageData = null;
+            }
         }
+    } elseif (isset($_FILES['content_image']) && $_FILES['content_image']['error'] != 4) {
+        //  file upload errors
+        $uploadErrors = [
+            UPLOAD_ERR_INI_SIZE => 'File exceeds upload_max_filesize',
+            UPLOAD_ERR_FORM_SIZE => 'File exceeds MAX_FILE_SIZE',
+            UPLOAD_ERR_PARTIAL => 'File was only partially uploaded',
+            UPLOAD_ERR_NO_TMP_DIR => 'Missing temporary folder',
+            UPLOAD_ERR_CANT_WRITE => 'Failed to write file to disk',
+            UPLOAD_ERR_EXTENSION => 'Upload stopped by extension'
+        ];
+        
+        $errorCode = $_FILES['content_image']['error'];
+        $errorMsg = $uploadErrors[$errorCode] ?? "Unknown error ($errorCode)";
+        $errors[] = "Image upload failed: $errorMsg";
+        
+        logError("Image upload failed", [
+            'admin_id' => $adminId,
+            'error_code' => $errorCode,
+            'error_msg' => $errorMsg
+        ]);
     }
     
+    // proceed if validation passed
     if (empty($errors)) {
-        $sql = "INSERT INTO educational_content 
-                (admin_id, category_id, title, description, content_type, emissions_level, content_image) 
-                VALUES (?, ?, ?, ?, ?, ?, ?)";
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param("iisssss", $adminId, $categoryId, $title, $description, $contentType, $emissionsLevel, $imageData);
-
-        
         try {
-            if ($stmt->execute()) {
-                $success = "Content added successfully!";
-                $_POST = [];
-            } else {
+            $sql = "INSERT INTO educational_content 
+                    (admin_id, category_id, title, description, content_type, emissions_level, content_image) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?)";
+            $stmt = $conn->prepare($sql);
+            
+            if (!$stmt) {
+                logError("Failed to prepare INSERT educational_content", [
+                    'error' => $conn->error,
+                    'admin_id' => $adminId,
+                    'title' => $title
+                ]);
                 $errors[] = "Failed to add content. Please try again.";
+            } else {
+                $stmt->bind_param("iisssss", $adminId, $categoryId, $title, $description, $contentType, $emissionsLevel, $imageData);
+
+                if ($stmt->execute()) {
+                    $contentId = $stmt->insert_id;
+                    
+                    logActivity($adminId, 'CONTENT_ADDED', sprintf(
+                        "ID: %d, Title: %s, Type: %s, Category: %s, Level: %s, Image: %s",
+                        $contentId,
+                        substr($title, 0, 50),
+                        $contentType,
+                        $categoryId ?? 'none',
+                        $emissionsLevel ?? 'none',
+                        $imageData ? 'yes' : 'no'
+                    ));
+                    
+                    $success = "Content added successfully!";
+                    $_POST = [];
+                } else {
+                    logError("Failed to execute INSERT educational_content", [
+                        'error' => $stmt->error,
+                        'errno' => $stmt->errno,
+                        'admin_id' => $adminId,
+                        'title' => $title,
+                        'content_type' => $contentType
+                    ]);
+                    $errors[] = "Failed to add content. Please try again.";
+                }
+                
+                $stmt->close();
             }
+            
         } catch (mysqli_sql_exception $e) {
             if (str_contains($e->getMessage(), 'Data too long')) {
                 $errors[] = "Image is too large for the database column. "
                           . "Ask your administrator to run: "
                           . "ALTER TABLE educational_content MODIFY content_image LONGBLOB;";
+                
+                logError("Image too large for database column", [
+                    'admin_id' => $adminId,
+                    'error' => $e->getMessage(),
+                    'image_size' => $imageData ? strlen($imageData) : 0
+                ]);
             } else {
                 $errors[] = "Database error: " . htmlspecialchars($e->getMessage());
+                
+                logError("Exception while adding content", [
+                    'admin_id' => $adminId,
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ]);
             }
         }
+    } else {
+        //  Log validation failures
+        logActivity($adminId, 'CONTENT_ADD_VALIDATION_FAILED', "Errors: " . implode(', ', $errors));
     }
 }
 
-// Get categories
-$categories = $conn->query("SELECT category_id, category_name FROM emissions_category ORDER BY category_name");
+//  categories with error handling
+try {
+    $categories = $conn->query("SELECT category_id, category_name FROM emissions_category ORDER BY category_name");
+    
+    if (!$categories) {
+        logError("Failed to fetch categories", ['error' => $conn->error]);
+        $categories = null; // Will show error in UI
+    }
+} catch (Exception $e) {
+    logError("Exception fetching categories", ['error' => $e->getMessage()]);
+    $categories = null;
+}
 ?>
 
 <!DOCTYPE html>

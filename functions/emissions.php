@@ -1,4 +1,13 @@
 <?php
+/**
+ * Emissions Calculation and Storage Functions
+ * Handles all carbon footprint calculations and database operations
+ */
+
+if (!function_exists('logError')) {
+    require_once __DIR__ . '/error_handler.php';
+}
+
 // Emission factors (kg CO2 per unit)
 class EmissionFactors {
     // Electricity: kg CO2 per kWh
@@ -57,7 +66,6 @@ function calculateFoodEmissions($mealType, $count = 1) {
 }
 
 /**
- * ✅ IMPROVED: Calculate emission level based on total emissions AND period type
  * Different periods have different thresholds because:
  * - 50 kg/day = 1,500 kg/month (VERY HIGH!)
  * - 50 kg/week = 215 kg/month (Medium)
@@ -87,7 +95,7 @@ function getEmissionLevel($totalEmissions, $period = 'monthly') {
         ]
     ];
     
-    // Default to monthly if period not recognized (backward compatibility)
+    // Default to monthly if period not recognized 
     if (!isset($thresholds[$period])) {
         $period = 'monthly';
     }
@@ -103,54 +111,179 @@ function getEmissionLevel($totalEmissions, $period = 'monthly') {
     }
 }
 
+/**
+* save emissions with error handling
+ * @param mysqli $conn - Database connection
+ * @param int $userId - User ID
+ * @param array $emissionsData - Array of emission data
+ * @param string $period - 'daily', 'weekly', or 'monthly'
+ * @param string|null $recordDateTime - Optional specific date/time
+ * @return int|false - Record ID on success, false on failure
+ */
 function saveEmissionsRecord($conn, $userId, $emissionsData, $period = 'daily', $recordDateTime = null) {
-    $totalEmissions = array_sum(array_column($emissionsData, 'emissions'));
-    
-    // Use provided datetime or default to current
-    if ($recordDateTime) {
-        $recordDate = substr($recordDateTime, 0, 10);
-    } else {
-        $recordDate = date('Y-m-d');
-        $recordDateTime = date('Y-m-d H:i:s');
+    if (empty($emissionsData) || !is_array($emissionsData)) {
+        logError("saveEmissionsRecord called with empty or invalid data", [
+            'user_id' => $userId,
+            'data_type' => gettype($emissionsData)
+        ]);
+        return false;
     }
     
-    // Ensure recordDateTime is a valid datetime format
-    if (strlen($recordDateTime) == 10) {
-        $recordDateTime = $recordDateTime . ' ' . date('H:i:s');
+    try {
+        $totalEmissions = array_sum(array_column($emissionsData, 'emissions'));
+        
+        // Use provided datetime or default to current
+        if ($recordDateTime) {
+            $recordDate = substr($recordDateTime, 0, 10);
+        } else {
+            $recordDate = date('Y-m-d');
+            $recordDateTime = date('Y-m-d H:i:s');
+        }
+        
+        if (strlen($recordDateTime) == 10) {
+            $recordDateTime = $recordDateTime . ' ' . date('H:i:s');
+        }
+        
+        // Calculate period key based on the date and period type
+        $periodKey = calculatePeriodKey($recordDate, $period);
+        
+        $sql = "INSERT INTO emissions_record (user_id, record_date, total_carbon_emissions, period) 
+                VALUES (?, ?, ?, ?)";
+        $stmt = $conn->prepare($sql);
+        
+        if (!$stmt) {
+            logError("Failed to prepare INSERT emissions_record", [
+                'error' => $conn->error,
+                'user_id' => $userId,
+                'total' => $totalEmissions
+            ]);
+            return false;
+        }
+        
+        $stmt->bind_param("isds", $userId, $recordDate, $totalEmissions, $period);
+        
+        if (!$stmt->execute()) {
+            logError("Failed to execute INSERT emissions_record", [
+                'error' => $stmt->error,
+                'errno' => $stmt->errno,
+                'user_id' => $userId,
+                'date' => $recordDate,
+                'total' => $totalEmissions,
+                'period' => $period
+            ]);
+            $stmt->close();
+            return false;
+        }
+        
+        $recordId = $stmt->insert_id;
+        $stmt->close();
+        
+        if (!$recordId || $recordId <= 0) {
+            logError("Invalid record ID after INSERT", [
+                'record_id' => $recordId,
+                'user_id' => $userId
+            ]);
+            return false;
+        }
+        
+        $sql = "INSERT INTO emissions_details (record_id, category_id, input_value, emissions_value) 
+                VALUES (?, ?, ?, ?)";
+        $stmt = $conn->prepare($sql);
+        
+        if (!$stmt) {
+            logError("Failed to prepare INSERT emissions_details", [
+                'error' => $conn->error,
+                'record_id' => $recordId
+            ]);
+            
+            $deleteStmt = $conn->prepare("DELETE FROM emissions_record WHERE record_id = ?");
+            if ($deleteStmt) {
+                $deleteStmt->bind_param("i", $recordId);
+                $deleteStmt->execute();
+                $deleteStmt->close();
+            }
+            
+            return false;
+        }
+        
+        $successCount = 0;
+        $failCount = 0;
+        
+        foreach ($emissionsData as $index => $data) {
+            $stmt->bind_param("iisd", 
+                $recordId, 
+                $data['category_id'], 
+                $data['input'], 
+                $data['emissions']
+            );
+            
+            if (!$stmt->execute()) {
+                $failCount++;
+                logError("Failed to insert emission detail", [
+                    'error' => $stmt->error,
+                    'record_id' => $recordId,
+                    'category_id' => $data['category_id'],
+                    'index' => $index
+                ]);
+            } else {
+                $successCount++;
+            }
+        }
+        
+        $stmt->close();
+        
+        if ($successCount === 0) {
+            logError("No emission details were saved", [
+                'record_id' => $recordId,
+                'user_id' => $userId,
+                'attempted' => count($emissionsData),
+                'failed' => $failCount
+            ]);
+            
+            $deleteStmt = $conn->prepare("DELETE FROM emissions_record WHERE record_id = ?");
+            if ($deleteStmt) {
+                $deleteStmt->bind_param("i", $recordId);
+                $deleteStmt->execute();
+                $deleteStmt->close();
+            }
+            
+            return false;
+        }
+        
+        if ($failCount > 0) {
+            logError("Partial emission save - some details failed", [
+                'record_id' => $recordId,
+                'user_id' => $userId,
+                'success' => $successCount,
+                'failed' => $failCount,
+                'total' => count($emissionsData)
+            ]);
+        }
+        
+        return $recordId;
+        
+    } catch (Exception $e) {
+        logError("Exception in saveEmissionsRecord", [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString(),
+            'user_id' => $userId
+        ]);
+        return false;
     }
-    
-    // Calculate period key based on the date and period type
-    $periodKey = calculatePeriodKey($recordDate, $period);
-    
-    // Insert emissions record (period saved to DB)
-    $sql = "INSERT INTO emissions_record (user_id, record_date, total_carbon_emissions, period) 
-            VALUES (?, ?, ?, ?)";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("isds", $userId, $recordDate, $totalEmissions, $period);
-    
-    $stmt->execute();
-    $recordId = $stmt->insert_id;
-    
-    // Insert emissions details
-    $sql = "INSERT INTO emissions_details (record_id, category_id, input_value, emissions_value) 
-            VALUES (?, ?, ?, ?)";
-    $stmt = $conn->prepare($sql);
-    
-    foreach ($emissionsData as $data) {
-        $stmt->bind_param("iisd", 
-            $recordId, 
-            $data['category_id'], 
-            $data['input'], 
-            $data['emissions']
-        );
-        $stmt->execute();
-    }
-    
-    return $recordId;
 }
 
 function calculatePeriodKey($date, $period) {
-    $dateTime = new DateTime($date);
+    try {
+        $dateTime = new DateTime($date);
+    } catch (Exception $e) {
+        logError("Invalid date in calculatePeriodKey", [
+            'date' => $date,
+            'period' => $period,
+            'error' => $e->getMessage()
+        ]);
+        // Return current date as fallback
+        $dateTime = new DateTime();
+    }
     
     switch ($period) {
         case 'weekly':

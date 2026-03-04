@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once '../config/db_connection.php';
+require_once '../functions/error_handler.php';
 
 // Redirect if already logged in
 if (isset($_SESSION['user_id'])) {
@@ -14,34 +15,70 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $email = trim($_POST['email']);
     $password = trim($_POST['password']);
     
-    // prepared statement to prevent SQL injection
-    $sql = "SELECT user_id, name, email, password, department 
-            FROM user WHERE email = ?";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("s", $email);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    
-    if ($result->num_rows == 1) {
-        $user = $result->fetch_assoc();
-        
-        //  Password verification with hashed password
-        if (password_verify($password, $user['password'])) {
-            // Regenerate session ID to prevent session fixation
-            session_regenerate_id(true);
-            
-            $_SESSION['user_id'] = $user['user_id'];
-            $_SESSION['user_name'] = $user['name'];
-            $_SESSION['user_email'] = $user['email'];
-            $_SESSION['department'] = $user['department'];
-            
-            header("Location: dashboard.php");
-            exit();
-        } else {
-            $error = "Invalid email or password";
-        }
+    if (empty($email) || empty($password)) {
+        $error = "Please enter both email and password";
+        logSecurity('LOGIN_ATTEMPT_EMPTY_FIELDS', "Email: $email");
     } else {
-        $error = "Invalid email or password";
+        try {
+            // Prepared statement to prevent SQL injection
+            $sql = "SELECT user_id, name, email, password, department 
+                    FROM user WHERE email = ?";
+            $stmt = $conn->prepare($sql);
+            
+            if (!$stmt) {
+                logError("Failed to prepare login query", [
+                    'error' => $conn->error,
+                    'email' => $email
+                ]);
+                $error = "System error. Please try again later.";
+            } else {
+                $stmt->bind_param("s", $email);
+                
+                if (!$stmt->execute()) {
+                    logError("Failed to execute login query", [
+                        'error' => $stmt->error,
+                        'email' => $email
+                    ]);
+                    $error = "System error. Please try again later.";
+                } else {
+                    $result = $stmt->get_result();
+                    
+                    if ($result->num_rows == 1) {
+                        $user = $result->fetch_assoc();
+                        
+                        // Password verification with hashed password
+                        if (password_verify($password, $user['password'])) {
+                            // Regenerate session ID to prevent session fixation
+                            session_regenerate_id(true);
+                            
+                            $_SESSION['user_id'] = $user['user_id'];
+                            $_SESSION['user_name'] = $user['name'];
+                            $_SESSION['user_email'] = $user['email'];
+                            $_SESSION['department'] = $user['department'];
+                            
+                            logActivity($user['user_id'], 'LOGIN_SUCCESS', "User: {$user['name']}");
+                            
+                            header("Location: dashboard.php");
+                            exit();
+                        } else {
+                            logSecurity('LOGIN_FAILED_WRONG_PASSWORD', "Email: $email");
+                            $error = "Invalid email or password";
+                        }
+                    } else {
+                        logSecurity('LOGIN_FAILED_USER_NOT_FOUND', "Email: $email");
+                        $error = "Invalid email or password";
+                    }
+                }
+                
+                $stmt->close();
+            }
+        } catch (Exception $e) {
+            logError("Login exception occurred", [
+                'error' => $e->getMessage(),
+                'email' => $email
+            ]);
+            $error = "An unexpected error occurred. Please try again.";
+        }
     }
 }
 ?>
