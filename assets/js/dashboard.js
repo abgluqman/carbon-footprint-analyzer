@@ -1,7 +1,3 @@
-// ============================================================
-// carbon-footprint-analyzer/assets/js/dashboard.js
-// Chart data is injected by dashboard.php via window.dashboardData
-// ============================================================
 
 // --- Emissions Trend Chart ---
 const trendCtx = document.getElementById('emissionsTrendChart').getContext('2d');

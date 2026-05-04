@@ -27,7 +27,7 @@ function getLatestEmissionLevel($conn, $userId) {
     $row = $result->fetch_assoc();
     
     if ($row) {
-        $period = $row['period'] ?? 'daily'; // Default to daily if not set
+        $period = $row['period'] ?? 'daily'; // Default to daily 
         return getEmissionLevel($row['total_carbon_emissions'], $period);
     }
     return 'N/A';

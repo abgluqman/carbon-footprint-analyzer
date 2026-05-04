@@ -1,7 +1,4 @@
-/* ============================================================
-   modal.css — Shared modal stability fix
-   Include this on any page that uses Bootstrap modals
-   ============================================================ */
+
 
 /* Remove all transitions/animations to prevent flickering */
 .modal {

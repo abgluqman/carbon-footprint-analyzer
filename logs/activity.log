@@ -36,3 +36,8 @@
 [2026-05-04 02:23:17] [ACTIVITY] User:1 Action:PROFILE_UPDATED IP:::1 Details:Profile updated
 [2026-05-04 02:25:11] [ACTIVITY] User:1 Action:PROFILE_UPDATED IP:::1 Details:Profile updated
 [2026-05-04 02:26:20] [ACTIVITY] User:1 Action:ADMIN_LOGIN_SUCCESS IP:::1 Details:Admin: Administrator
+[2026-05-04 04:02:44] [ACTIVITY] User:1 Action:EMISSION_ADDED IP:::1 Details:Period: daily, Date: 2026-05-04, Total: 2980.34 kg, Categories: 3
+[2026-05-04 04:25:25] [ACTIVITY] User:1 Action:LOGIN_SUCCESS IP:::1 Details:User: Abg Mohd Luqman
+[2026-05-04 04:41:01] [ACTIVITY] User:1 Action:LOGIN_SUCCESS IP:::1 Details:User: Abg Mohd Luqman
+[2026-05-04 06:54:15] [ACTIVITY] User:1 Action:LOGIN_SUCCESS IP:::1 Details:User: Abg Mohd Luqman
+[2026-05-04 07:18:04] [ACTIVITY] User:1 Action:LOGIN_SUCCESS IP:::1 Details:User: Abg Mohd Luqman

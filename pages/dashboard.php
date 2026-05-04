@@ -4,6 +4,9 @@ require_once '../config/db_connection.php';
 require_once '../functions/emissions.php';
 require_once '../functions/dashboard.php';
 
+// Set to MY time
+date_default_timezone_set('Asia/Kuala_Lumpur');
+
 // Check authentication
 if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
@@ -24,7 +27,7 @@ $previousMonthEmissions = getPreviousMonthEmissions($conn, $userId);
 $currentMonthLevel = getCurrentMonthLevel($conn, $userId);
 $emissionLevel = getLatestEmissionLevel($conn, $userId);
 $highestCategory = getHighestEmissionCategory($conn, $userId);
-$emissionHistory = getEmissionHistory($conn, $userId, 5);
+$emissionHistory = getEmissionHistory($conn, $userId, 6);
 $monthlyTrend = getMonthlyEmissionsTrend($conn, $userId, 6);
 $categoryBreakdown = getCategoryBreakdown($conn, $userId);
 $personalizedTips = getPersonalizedTips($conn, $userId);
@@ -323,7 +326,7 @@ while ($row = $categoryBreakdown->fetch_assoc()) {
                                 </h5>
                             </div>
                             <div class="card-body">
-                                <canvas id="emissionsTrendChart" height="80"></canvas>
+                                <canvas id="emissionsTrendChart" height="145"></canvas>
                             </div>
                         </div>
                     </div>
@@ -346,16 +349,27 @@ while ($row = $categoryBreakdown->fetch_assoc()) {
                 <!-- History and Tips Row -->
                 <div class="row g-3 mb-4">
                     <!-- Emission History -->
-                    <div class="col-lg-7" id="historySection">
-                        <div class="card border-0 shadow-sm">
-                            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <div class="col-lg-8">
+                        <div class="card h-100 shadow-sm d-flex flex-column">
+
+                        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center">
                                 <h5 class="mb-0">
-                                    <i class="bi bi-clock-history"></i> Recent History
-                                    <span class="badge bg-info ms-2"><?php echo $totalRecords; ?> total</span>
+                                <i class="bi bi-clock-history"></i> Recent History
                                 </h5>
-                                <a href="history.php" class="btn btn-sm btn-outline-secondary">View All</a>
-                            </div>
-                            <div class="card-body">
+                            <span class="badge bg-info ms-2">
+                    <?php echo $totalRecords; ?> total
+                </span>
+            </div>
+
+            <a href="history.php" class="btn btn-sm btn-outline-secondary">
+                View All
+            </a>
+        </div>
+
+        <div class="card-body overflow-auto">
+            <div class="table-responsive">
+                <table class="table table-sm mb-0">
                                 <?php 
                                 $dashboardModalHtml = '';
                                 if ($emissionHistory->num_rows > 0): ?>
@@ -496,13 +510,14 @@ while ($row = $categoryBreakdown->fetch_assoc()) {
                     </div>
                     
                     <!-- Personalized Tips -->
-                    <div class="col-lg-5">
-                        <div class="card border-0 shadow-sm">
-                            <div class="card-header bg-white">
+                    <div class="col-lg-4">
+                        <div class="card h-100 shadow-sm d-flex flex-column">
+                        <div class="card-header bg-white">
                                 <h5 class="mb-0">
                                     <i class="bi bi-lightbulb"></i> Personalized Tips
                                 </h5>
                             </div>
+                            <div class="card-body overflow-auto" style="max-height: 400px;">
                             <div class="card-body">
                                 <?php if (!empty($personalizedTips)): ?>
                                     <div class="list-group list-group-flush">
