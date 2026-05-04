@@ -6,6 +6,7 @@ require_once '../functions/error_handler.php';
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $name = trim($_POST['name']);
     $email = trim($_POST['email']);
+    $phone = trim($_POST['phone']);
     $password = trim($_POST['password']);
     $department = trim($_POST['department']);
     
@@ -15,15 +16,20 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (empty($name)) $errors[] = "Name is required";
     if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) 
         $errors[] = "Valid email is required";
+    if (empty($phone)) {
+        $errors[] = "Phone number is required";
+    } elseif (!preg_match('/^[0-9+\-() ]{8,20}$/', $phone)) {
+        $errors[] = "Phone number must be 8-20 digits (can include +, -, (), spaces)";
+    }
     if (strlen($password) < 8) 
         $errors[] = "Password must be at least 8 characters";
     if (empty($department)) $errors[] = "Department is required";
     
     if (empty($errors)) {
         try {
-            // Check if email exists using prepared statement
-            $check_email = "SELECT email FROM user WHERE email = ?";
-            $stmt = $conn->prepare($check_email);
+            
+            $check_sql = "SELECT email, phone FROM user WHERE email = ? OR phone = ?";
+            $stmt = $conn->prepare($check_sql);
             
             if (!$stmt) {
                 logError("Failed to prepare email check query", [
@@ -44,8 +50,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     $result = $stmt->get_result();
                     
                     if ($result->num_rows > 0) {
-                        $errors[] = "Email already registered";
-                        logSecurity('REGISTRATION_DUPLICATE_EMAIL', "Email: $email");
+                        $existing = $result->fetch_assoc();
+                        
+                        //  to check which field is duplicate
+                        if ($existing['email'] === $email) {
+                            $errors[] = "Email already registered";
+                            logSecurity('REGISTRATION_DUPLICATE_EMAIL', "Email: $email");
+                        }
+                        if ($existing['phone'] === $phone) {
+                            $errors[] = "Phone number already registered";
+                            logSecurity('REGISTRATION_DUPLICATE_PHONE', "Phone: $phone");
+                        }
                     }
                 }
                 
@@ -61,8 +76,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     $errors[] = "System error. Please try again later.";
                 } else {
                     // Insert using prepared statement
-                    $sql = "INSERT INTO user (name, email, password, department) 
-                            VALUES (?, ?, ?, ?)";
+                    $sql = "INSERT INTO user (name, email, phone, password, department) 
+                            VALUES (?, ?, ?, ?, ?)";
                     $stmt = $conn->prepare($sql);
                     
                     if (!$stmt) {
@@ -77,7 +92,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         if ($stmt->execute()) {
                             $newUserId = $stmt->insert_id;
                             
-                            logActivity($newUserId, 'USER_REGISTERED', "Name: $name, Email: $email, Department: $department");
+                            logActivity($newUserId, 'USER_REGISTERED', 
+                                "Name: $name, Email: $email, Phone: $phone, Department: $department");
                             
                             $_SESSION['success'] = "Registration successful! Please login.";
                             header("Location: login.php");
@@ -94,8 +110,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                 'department' => $department
                             ]);
                             
-                            if ($errorCode == 1062) { // Duplicate entry
-                                $errors[] = "Email already registered";
+                            if ($errorCode == 1062) {
+                                $errors[] = "Email or phone number already registered";
                             } else {
                                 $errors[] = "Registration failed. Please try again.";
                             }
@@ -115,7 +131,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $errors[] = "An unexpected error occurred. Please try again.";
         }
     } else {
-        logSecurity('REGISTRATION_VALIDATION_FAILED', "Email: $email, Errors: " . implode(', ', $errors));
+        logSecurity('REGISTRATION_VALIDATION_FAILED', 
+            "Email: $email, Phone: $phone, Errors: " . implode(', ', $errors));
     }
 }
 ?>
@@ -167,6 +184,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                 <input type="email" class="form-control" id="email" 
                                        name="email" value="<?php echo isset($email) ? htmlspecialchars($email) : ''; ?>" required>
                             </div>
+
+                            <div class="mb-3">
+                            <label for="phone" class="form-label">Phone Number or extension</label>
+                            <input type="tel" class="form-control" id="phone" name="phone" 
+                                   value="<?php echo isset($_POST['phone']) ? htmlspecialchars($_POST['phone']) : ''; ?>"
+                                   pattern="[0-9+\-() ]{8,20}"
+                                   required>
+                            <small class="text-muted">8-20 digits. Can include: + - ( ) and spaces</small>
+                        </div>
                             
                             <div class="mb-3">
                                 <label for="password" class="form-label">Password</label>

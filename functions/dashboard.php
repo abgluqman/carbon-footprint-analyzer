@@ -14,7 +14,7 @@ function getUserTotalEmissions($conn, $userId) {
 }
 
 function getLatestEmissionLevel($conn, $userId) {
-    //  Fetch period from database and use period-aware calculation
+    //  Fetch period from database 
     $sql = "SELECT total_carbon_emissions, period
             FROM emissions_record 
             WHERE user_id = ? 

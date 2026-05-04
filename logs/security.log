@@ -1,1 +1,21 @@
 [2026-03-04 06:38:25] [SECURITY] Event:LOGIN_FAILED_USER_NOT_FOUND IP:::1 Details:Email: lukehesmes@gmail.com
+[2026-03-16 06:19:18] [SECURITY] Event:LOGIN_FAILED_WRONG_PASSWORD IP:::1 Details:Email: abgluqman@gmail.com
+[2026-04-06 02:29:34] [SECURITY] Event:LOGIN_FAILED_WRONG_PASSWORD IP:::1 Details:Email: abgluqman@gmail.com
+[2026-04-06 03:29:46] [SECURITY] Event:INVALID_INPUT_ELECTRICITY IP:::1 Details:User: 1, Value: 1.0E+36
+[2026-04-06 03:43:54] [SECURITY] Event:INVALID_INPUT_FUEL IP:::1 Details:User: 1, Value: 1000000
+[2026-04-06 03:43:54] [SECURITY] Event:INVALID_INPUT_WATER IP:::1 Details:User: 1, Value: 99999999
+[2026-04-06 03:43:54] [SECURITY] Event:INVALID_INPUT_WASTE IP:::1 Details:User: 1, Value: 10000000
+[2026-04-06 10:00:32] [SECURITY] Event:INVALID_INPUT_FUEL IP:::1 Details:User: 1, Value: 1000000
+[2026-04-06 10:00:32] [SECURITY] Event:INVALID_INPUT_WATER IP:::1 Details:User: 1, Value: 99999999
+[2026-04-06 10:00:32] [SECURITY] Event:INVALID_INPUT_WASTE IP:::1 Details:User: 1, Value: 10000000
+[2026-04-14 06:23:40] [SECURITY] Event:LOGIN_FAILED_WRONG_PASSWORD IP:::1 Details:Email: abgluqman@gmail.com
+[2026-04-14 06:23:52] [SECURITY] Event:LOGIN_FAILED_WRONG_PASSWORD IP:::1 Details:Email: abgluqman@gmail.com
+[2026-04-14 06:24:07] [SECURITY] Event:LOGIN_FAILED_WRONG_PASSWORD IP:::1 Details:Email: abgluqman@gmail.com
+[2026-04-14 06:33:26] [SECURITY] Event:LOGIN_FAILED_WRONG_PASSWORD IP:::1 Details:Email: abgluqman@gmail.com
+[2026-04-14 06:33:36] [SECURITY] Event:LOGIN_FAILED_WRONG_PASSWORD IP:::1 Details:Email: abgluqman@gmail.com
+[2026-04-14 06:33:46] [SECURITY] Event:LOGIN_FAILED_WRONG_PASSWORD IP:::1 Details:Email: abgluqman@gmail.com
+[2026-04-29 01:51:53] [SECURITY] Event:LOGIN_FAILED_USER_NOT_FOUND IP:::1 Details:Email: abgluqman@gmail.com
+[2026-04-29 01:53:00] [SECURITY] Event:LOGIN_FAILED_USER_NOT_FOUND IP:::1 Details:Email: abgluqman@gmail.com
+[2026-04-29 01:53:10] [SECURITY] Event:LOGIN_FAILED_USER_NOT_FOUND IP:::1 Details:Email: abgluqman@gmail.com
+[2026-04-29 01:53:24] [SECURITY] Event:LOGIN_FAILED_USER_NOT_FOUND IP:::1 Details:Email: 82335@siswa.unimas.my
+[2026-04-29 01:53:32] [SECURITY] Event:LOGIN_FAILED_USER_NOT_FOUND IP:::1 Details:Email: abgluqman@gmail.com

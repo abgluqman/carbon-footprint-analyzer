@@ -90,8 +90,6 @@ if ($res) {
                     <img src="assets/images/landing-page.png" 
                          alt="Globe Image Landing Page" 
                          style="max-width: 100%; height: auto; opacity: 1;">
-                    <!-- CHANGED: opacity 1.4 → 1 (was invalid, fixed to normal) -->
-                    <!-- CHANGED: ../assets → assets (fixed path) -->
             </div>
         </div>
     </section>
@@ -305,7 +303,7 @@ if ($res) {
         // Whether visitor is logged in (injected from PHP)
         const isLoggedIn = <?php echo json_encode($isLoggedIn); ?>;
 
-        // Attach click handlers to content links; non-logged-in users see modal preview
+        //  non-logged-in users see modal preview
         document.addEventListener('DOMContentLoaded', function() {
             const links = document.querySelectorAll('.content-card-link');
             links.forEach(link => {

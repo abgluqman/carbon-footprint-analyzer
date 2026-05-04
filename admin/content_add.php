@@ -82,7 +82,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             logError("Failed to get column info for content_image", ['error' => $conn->error]);
         }
 
-        // Use the most restrictive limit
+        // Use restrictive limit
         $maxSize = $defaultMax;
         if ($mysqlMax && $mysqlMax > 2048) {
             $maxSize = min($maxSize, max(1024, $mysqlMax - 1024));
@@ -379,7 +379,7 @@ try {
                         <ul class="small">
                             <li>Short, actionable advice (50-150 words)</li>
                             <li>Focus on one specific action</li>
-                            <li>Include measurable benefits when possible</li>
+                            <li>Include measurable benefits</li>
                         </ul>
                         
                         <h6 class="text-success mt-3">Articles</h6>
@@ -389,11 +389,10 @@ try {
                             <li>Provide context and examples</li>
                         </ul>
                         
-                        <h6 class="text-success mt-3">Videos</h6>
+                        <h6 class="text-success mt-3">Photos</h6>
                         <ul class="small">
-                            <li>Educational video content</li>
-                            <li>Multimedia presentations</li>
-                            <li>Step-by-step visual guides</li>
+                            <li>Educational photos content</li>
+                            <li>Media presentations</li>
                         </ul>
                         
                         <hr>
@@ -403,8 +402,7 @@ try {
                             <li>Use clear, simple language</li>
                             <li>Be specific and actionable</li>
                             <li>Include relevant statistics when available</li>
-                            <li>Keep user motivation in mind</li>
-                            <li>Review for accuracy before publishing</li>
+                            <li>Review before publishing</li>
                         </ul>
                     </div>
                 </div>
