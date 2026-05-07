@@ -1,5 +1,5 @@
 <?php
-// Get user's profile photo if logged in
+// Get user profile photo if logged in
 $userPhoto = null;
 $userInitial = '';
 

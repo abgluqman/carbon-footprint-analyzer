@@ -4,7 +4,7 @@ require_once '../config/db_connection.php';
 require_once '../functions/emissions.php';
 require_once 'auth_check.php';
 
-// ✅ Whitelist all filter inputs
+// Whitelist all filter inputs
 $allowedDateRanges = ['today', 'week', 'month', 'year'];
 $allowedLevels     = ['Low', 'Medium', 'High'];
 

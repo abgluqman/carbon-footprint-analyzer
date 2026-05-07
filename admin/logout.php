@@ -1,7 +1,7 @@
 <?php
 session_start();
 
-// Clear all session data (not just individual keys)
+// Clear all session data 
 $_SESSION = array();
 
 //  Destroy the session cookie properly
