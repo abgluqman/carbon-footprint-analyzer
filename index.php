@@ -5,7 +5,7 @@ require_once __DIR__ . '/config/db_connection.php';
 // Determine if visitor is logged in
 $isLoggedIn = isset($_SESSION['user_id']) && !empty($_SESSION['user_id']);
 
-// Fetch latest educational content (limit 4)
+// Fetch latest educational content 
 $contents = [];
 // Only show general content: no specific category and no specific emission level
 $res = $conn->query("SELECT content_id, title, description, content_type, emissions_level, content_image FROM educational_content WHERE category_id IS NULL AND (emissions_level IS NULL OR emissions_level = '') ORDER BY content_id DESC LIMIT 4");

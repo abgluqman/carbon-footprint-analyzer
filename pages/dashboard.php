@@ -34,7 +34,7 @@ $personalizedTips = getPersonalizedTips($conn, $userId);
 $comparison = compareWithPreviousMonth($conn, $userId);
 $latestRecord = getLatestEmissionRecord($conn, $userId);
 
-// Calculate month-over-month change
+// Calculate month to month change
 $monthChange = 0;
 $monthTrend = 'neutral';
 if ($previousMonthEmissions > 0) {
@@ -53,7 +53,7 @@ while ($row = $monthlyTrend->fetch_assoc()) {
     $trendFromDb[$row['month']] = round($row['total'], 2);
 }
 
-// Always generate all 6 months so the chart is never empty or uneven
+// Generating 6 month chart 
 $trendLabels = [];
 $trendData   = [];
 for ($i = 5; $i >= 0; $i--) {
@@ -348,24 +348,22 @@ while ($row = $categoryBreakdown->fetch_assoc()) {
                 
                 <!-- History and Tips Row -->
                 <div class="row">
-    <!-- Recent History -->
-    <div class="col-lg-8 mb-4">
-        <div class="card h-100 shadow-sm">
-            <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                <div class="d-flex align-items-center">
-                    <h5 class="mb-0">
-                        <i class="bi bi-clock-history"></i> Recent History
-                    </h5>
-                    <span class="badge bg-info ms-2">
-                        <?php echo $totalRecords; ?> total
-                    </span>
-                </div>
-                <a href="history.php" class="btn btn-sm btn-outline-secondary">
-                    View All
+                <!-- Recent History -->
+                <div class="col-lg-8 mb-4">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-clock-history"></i> Recent History
+                                </h5>
+                            <span class="badge bg-info ms-2">
+                            <?php echo $totalRecords; ?> total
+                            </span>
+                            </div>
+                        <a href="history.php" class="btn btn-sm btn-outline-secondary">View All
                 </a>
             </div>
             
-            <!-- ✅ FIXED: Removed duplicate table tags and proper structure -->
             <div class="card-body overflow-auto" style="max-height: 500px;">
                 <?php 
                 $dashboardModalHtml = '';
@@ -401,7 +399,7 @@ while ($row = $categoryBreakdown->fetch_assoc()) {
                                     $detailsStmt->execute();
                                     $details = $detailsStmt->get_result();
 
-                                    // Build modal HTML
+                                    
                                     ob_start();
                                     ?>
                                     <div class="modal fade" id="dashDetailsModal<?php echo $safeRecordId; ?>" 
@@ -494,7 +492,6 @@ while ($row = $categoryBreakdown->fetch_assoc()) {
                         </table>
                     </div>
                 <?php else: ?>
-                    <!-- ✅ FIXED: Better empty state -->
                     <div class="text-center py-5">
                         <i class="bi bi-inbox" style="font-size: 3rem; color: #ccc;"></i>
                         <p class="text-muted mt-3 mb-3">No emission records yet</p>
@@ -516,12 +513,10 @@ while ($row = $categoryBreakdown->fetch_assoc()) {
                 </h5>
             </div>
             
-            <!-- ✅ FIXED: Single card-body with proper styling -->
             <div class="card-body overflow-auto" style="max-height: 500px;">
                 <?php if (!empty($personalizedTips)): ?>
                     <div class="list-group list-group-flush">
                         <?php foreach ($personalizedTips as $tip): ?>
-                            <!-- ✅ FIXED: Changed to success/green theme -->
                             <div class="list-group-item border-0 px-0 mb-3 border-start border-success border-3 ps-3" 
                                  style="background-color: #f8fff9;">
                                 <div class="d-flex w-100 justify-content-between align-items-start mb-2">
@@ -551,7 +546,6 @@ while ($row = $categoryBreakdown->fetch_assoc()) {
                         </a>
                     </div>
                 <?php else: ?>
-                    <!-- ✅ FIXED: Better empty state with consistent height -->
                     <div class="text-center py-5">
                         <i class="bi bi-lightbulb" style="font-size: 3rem; color: #ccc;"></i>
                         <p class="text-muted mt-3 mb-3">Start tracking your emissions to get personalized tips!</p>
@@ -564,8 +558,6 @@ while ($row = $categoryBreakdown->fetch_assoc()) {
         </div>
     </div>
 </div>
-
-<!-- ✅ FIXED: Modals should be outside the main content -->
 <?php echo $dashboardModalHtml; ?>
 
 </main>

@@ -287,7 +287,7 @@ $categories = $conn->query("SELECT * FROM emissions_category ORDER BY category_n
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Sidebar Toggle Functionality
+        // Sidebar Functionality
         const sidebarToggle = document.getElementById('sidebarToggleBtn');
         const sidebar = document.getElementById('sidebar');
         let isModalOpen = false;
@@ -324,7 +324,6 @@ $categories = $conn->query("SELECT * FROM emissions_category ORDER BY category_n
         
         // Touch handler for sidebar outside
         function handleTouch(e) {
-            // Never collapse sidebar if a modal is open
             if (isModalOpen) return;
             
             if (sidebar && !sidebar.classList.contains('collapsed')) {

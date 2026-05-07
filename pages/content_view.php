@@ -22,7 +22,7 @@ if (!$row) {
     exit;
 }
 
-// If image exists, base64-encode it for transport
+// If image exists
 $imageBase64 = null;
 if (!empty($row['content_image'])) {
     $imageBase64 = base64_encode($row['content_image']);

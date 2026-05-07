@@ -1,6 +1,9 @@
 <?php
 require_once __DIR__ . '/../vendor/tecnickcom/tcpdf/tcpdf.php';
 
+// Set to MY time
+date_default_timezone_set('Asia/Kuala_Lumpur');
+
 class CarbonFootprintPDF extends TCPDF {
     private $userData;
     private $reportData;
@@ -38,7 +41,7 @@ class CarbonFootprintPDF extends TCPDF {
         // Set image scale factor
         $this->setImageScale(PDF_IMAGE_SCALE_RATIO);
         
-        // Set font - dejavusans supports Unicode symbols like ▲ ▼
+        // Set font - dejavusans 
         $this->SetFont('dejavusans', '', 10);
     }
     
@@ -281,7 +284,7 @@ class CarbonFootprintPDF extends TCPDF {
         $this->SetFont('dejavusans', 'B', 14);
         $this->SetFillColor(25, 135, 84);
         $this->SetTextColor(255, 255, 255);
-        $this->Cell(0, 10, 'Personalized Recommendations', 0, 1, 'L', true);
+        $this->Cell(0, 10, 'Recommendations', 0, 1, 'L', true);
         $this->Ln(3);
         
         $this->SetFont('dejavusans', '', 10);

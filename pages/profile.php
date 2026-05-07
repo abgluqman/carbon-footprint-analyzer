@@ -150,7 +150,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
     }
 }
 
-// ✅ ADDED: Handle profile photo upload
+// Profile photo upload
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['upload_photo'])) {
     // CSRF validation
     if (!isset($_POST['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
@@ -159,7 +159,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['upload_photo'])) {
     }
     
     if (isset($_FILES['profile_photo']) && $_FILES['profile_photo']['error'] == 0) {
-        // Get max allowed size from database
         $mysqlMax = null;
         $res = $conn->query("SHOW VARIABLES LIKE 'max_allowed_packet'");
         if ($res) {
@@ -192,7 +191,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['upload_photo'])) {
                 $limitMB
             ));
         } else {
-            // Read and resize image if needed
+            // Read and resize image 
             $imageData = @file_get_contents($_FILES['profile_photo']['tmp_name']);
             
             if ($imageData === false) {
@@ -289,7 +288,7 @@ if (!$stmt) {
     }
 }
 
-// ✅ ADDED: Handle profile photo removal
+// Profile photo removal
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['remove_photo'])) {
     // CSRF validation
     if (!isset($_POST['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
@@ -462,8 +461,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['change_password'])) {
                     </div>
                 <?php endif; ?>
 
+                <!-- Profile photo -->
                 <div class="row">
-                    <!-- ✅ ADDED: Profile Photo Section -->
                     <div class="col-md-12 mb-4">
                         <div class="card">
                             <div class="card-header">

@@ -393,7 +393,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             });
         }
 
-        // Initialize period UI on page load 
+        // Initialize period on page load 
         document.addEventListener('DOMContentLoaded', function() {
             const period = document.getElementById('period').value;
             const periodInfo = document.getElementById('periodInfo');
@@ -412,7 +412,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             if (dateLabel) dateLabel.innerHTML = labels[period] || labels.daily;
         });
 
-        // Sidebar Toggle Functionality
+        // Sidebar Toggle 
         const sidebarToggle = document.getElementById('sidebarToggleBtn');
         const sidebar = document.getElementById('sidebar');
         let isModalOpen = false;
@@ -434,7 +434,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             });
         }
         
-        // Click handler for sidebar outside
+        // Click handler for sidebar 
         function handleClick(e) {
             if (isModalOpen) return;
             
@@ -446,7 +446,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             }
         }
         
-        // Touch handler for sidebar outside
+        // Touch handler for sidebar 
         function handleTouch(e) {
             if (isModalOpen) return;
             
@@ -473,7 +473,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             });
         });
         
-        // Initialize period UI on page load 
+        // Initialize period on page load 
         document.addEventListener('DOMContentLoaded', function() {
             const currentPeriod = document.getElementById('period').value;
             updatePeriodUI(currentPeriod);

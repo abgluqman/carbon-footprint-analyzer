@@ -11,7 +11,7 @@ if (!isset($_SESSION['user_id'])) {
 $userId = $_SESSION['user_id'];
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    // Delete user account (cascade will delete all related records)
+    // Delete user account 
     $sql = "DELETE FROM user WHERE user_id = ?";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("i", $userId);
@@ -30,7 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 }
 
-// If accessed via GET, redirect to profile
+// Redirect to profile
 header("Location: profile.php");
 exit();
 ?>

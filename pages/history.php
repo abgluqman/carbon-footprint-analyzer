@@ -323,7 +323,6 @@ $records = $stmt->get_result();
             
             // Manually handle modal opening
             modalTriggers.forEach((trigger, index) => {
-                // Remove Bootstrap's automatic handling
                 trigger.removeAttribute('data-bs-toggle');
                 
                 // Get the target modal ID
@@ -331,7 +330,6 @@ $records = $stmt->get_result();
                 const targetModal = document.querySelector(targetId);
                 
                 if (targetModal) {
-                    // Set initial aria-hidden
                     targetModal.setAttribute('aria-hidden', 'true');
                     
                     // Create Bootstrap Modal instance
@@ -372,7 +370,7 @@ $records = $stmt->get_result();
                 }
             });
             
-            // Log modal events and manage aria-hidden
+            // Log modal events 
             const modals = document.querySelectorAll('.modal');
             console.log('Found', modals.length, 'modals');
             
@@ -390,7 +388,7 @@ $records = $stmt->get_result();
                 
                 modal.addEventListener('hide.bs.modal', function(e) {
                     console.log('Modal hiding:', index);
-                    console.trace('Hide called from:'); // This will show what's closing it
+                    console.trace('Hide called from:'); 
                 });
                 
                 modal.addEventListener('hidden.bs.modal', function() {
