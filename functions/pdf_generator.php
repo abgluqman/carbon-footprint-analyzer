@@ -5,10 +5,10 @@ require_once __DIR__ . '/../vendor/tecnickcom/tcpdf/tcpdf.php';
 date_default_timezone_set('Asia/Kuala_Lumpur');
 
 class CarbonFootprintPDF extends TCPDF {
-    private $userData;
-    private $reportData;
+    private array $userData;
+    private array $reportData;
     
-    public function __construct($userData, $reportData) {
+    public function __construct(array $userData, array $reportData) {
         parent::__construct(PDF_PAGE_ORIENTATION, PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
         $this->userData = $userData;
         $this->reportData = $reportData;
@@ -53,7 +53,7 @@ class CarbonFootprintPDF extends TCPDF {
         $this->Cell(0, 10, '© ' . date('Y') . ' Carbon Footprint Analyzer', 0, false, 'R', 0, '', 0, false, 'T', 'M');
     }
     
-    public function generateReport() {
+    public function generateReport(): void {
         // Add a page
         $this->AddPage();
         
@@ -76,7 +76,7 @@ class CarbonFootprintPDF extends TCPDF {
         $this->addFooterNote();
     }
     
-    private function addUserInfo() {
+    private function addUserInfo(): void {
         $this->SetFont('dejavusans', 'B', 16);
         $this->SetTextColor(25, 135, 84); // Green color
         $this->Cell(0, 10, 'Personal Carbon Footprint Report', 0, 1, 'C');
@@ -109,7 +109,7 @@ class CarbonFootprintPDF extends TCPDF {
         $this->Ln(5);
     }
     
-    private function addSummary() {
+    private function addSummary(): void {
         // Section title
         $this->SetFont('dejavusans', 'B', 14);
         $this->SetFillColor(25, 135, 84);
@@ -150,7 +150,7 @@ class CarbonFootprintPDF extends TCPDF {
         $this->Ln(5);
     }
     
-    private function addDetailedBreakdown() {
+    private function addDetailedBreakdown(): void   {
         // Section title
         $this->SetFont('dejavusans', 'B', 14);
         $this->SetFillColor(25, 135, 84);
@@ -206,7 +206,7 @@ class CarbonFootprintPDF extends TCPDF {
         $this->Ln(5);
     }
     
-    private function addEmissionsTrend() {
+    private function addEmissionsTrend(): void {
         if (empty($this->reportData['history'])) {
             return;
         }
@@ -279,7 +279,7 @@ class CarbonFootprintPDF extends TCPDF {
         $this->Ln(5);
     }
     
-    private function addRecommendations() {
+    private function addRecommendations(): void {
         // Section title
         $this->SetFont('dejavusans', 'B', 14);
         $this->SetFillColor(25, 135, 84);
@@ -303,7 +303,7 @@ class CarbonFootprintPDF extends TCPDF {
         $this->Ln(5);
     }
     
-    private function addFooterNote() {
+    private function addFooterNote(): void {
         $this->SetFont('dejavusans', 'I', 9);
         $this->SetTextColor(108, 117, 125);
         
@@ -318,13 +318,13 @@ class CarbonFootprintPDF extends TCPDF {
         $this->writeHTML($html, true, false, true, false, '');
     }
     
-    private function getEmissionLevel($emissions) {
+    private function getEmissionLevel(float $emissions): string {
         if ($emissions < 50) return 'Low';
         if ($emissions < 100) return 'Medium';
         return 'High';
     }
     
-    private function getLevelColor($level) {
+    private function getLevelColor(string $level): string {
         switch ($level) {
             case 'Low': return '#198754';
             case 'Medium': return '#ffc107';
@@ -334,7 +334,7 @@ class CarbonFootprintPDF extends TCPDF {
     }
 
     
-    private function generateRecommendations() {
+    private function generateRecommendations() : array {
         $recommendations = [];
         $highestCategory = $this->reportData['highest_category'];
         
@@ -385,7 +385,7 @@ class CarbonFootprintPDF extends TCPDF {
     }
 }
 
-function generateCarbonReport($conn, $recordId, $userId) {
+function generateCarbonReport(mysqli $conn, int $recordId, int $userId): string|false {
     // Get user data
     $sql = "SELECT name, email, department FROM user WHERE user_id = ?";
     $stmt = $conn->prepare($sql);

@@ -68,3 +68,5 @@
 [2026-05-07 12:31:36] [ACTIVITY] User:1 Action:LOGIN_SUCCESS IP:::1 Details:User: Abg Mohd Luqman
 [2026-05-07 13:10:14] [ACTIVITY] User:1 Action:EMISSION_ADDED IP:::1 Details:Period: daily, Date: 2026-05-07, Total: 0.03 kg, Categories: 1
 [2026-05-07 13:13:11] [ACTIVITY] User:1 Action:EMISSION_ADDED IP:::1 Details:Period: weekly, Date: 2026-05-07, Total: 67.00 kg, Categories: 1
+[2026-05-07 13:27:12] [ACTIVITY] User:1 Action:LOGIN_SUCCESS IP:::1 Details:User: Abg Mohd Luqman
+[2026-05-07 13:45:12] [ACTIVITY] User:1 Action:EMISSION_ADDED IP:::1 Details:Period: daily, Date: 2026-05-07, Total: 1.19 kg, Categories: 1
