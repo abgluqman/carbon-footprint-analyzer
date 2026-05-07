@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/emissions.php';
 
-function getUserTotalEmissions($conn, $userId) {
+function getUserTotalEmissions(mysqli $conn, int $userId): float {
     $sql = "SELECT SUM(total_carbon_emissions) as total 
             FROM emissions_record 
             WHERE user_id = ?";
@@ -13,7 +13,7 @@ function getUserTotalEmissions($conn, $userId) {
     return $row['total'] ?? 0;
 }
 
-function getLatestEmissionLevel($conn, $userId) {
+function getLatestEmissionLevel(mysqli $conn, int $userId): string {
     //  Fetch period from database 
     $sql = "SELECT total_carbon_emissions, period
             FROM emissions_record 
@@ -33,7 +33,7 @@ function getLatestEmissionLevel($conn, $userId) {
     return 'N/A';
 }
 
-function getHighestEmissionCategory($conn, $userId) {
+function getHighestEmissionCategory(mysqli $conn, int $userId): string {
     $sql = "SELECT ec.category_name, SUM(ed.emissions_value) as total
             FROM emissions_details ed
             JOIN emissions_record er ON ed.record_id = er.record_id
@@ -51,7 +51,7 @@ function getHighestEmissionCategory($conn, $userId) {
     return $row ? $row['category_name'] : 'N/A';
 }
 
-function getEmissionHistory($conn, $userId, $limit = 5) {
+function getEmissionHistory(mysqli $conn, int $userId, int $limit = 5): mysqli_result {
     //  Secondary sort by record_id for same-date records
     $sql = "SELECT record_id, record_date, total_carbon_emissions, period 
             FROM emissions_record 
@@ -64,7 +64,7 @@ function getEmissionHistory($conn, $userId, $limit = 5) {
     return $stmt->get_result();
 }
 
-function getMonthlyEmissionsTrend($conn, $userId, $months = 6) {
+function getMonthlyEmissionsTrend(mysqli $conn, int $userId, int $months = 6): mysqli_result {
     $sql = "SELECT 
                 DATE_FORMAT(record_date, '%Y-%m') as month,
                 SUM(total_carbon_emissions) as total
@@ -79,7 +79,7 @@ function getMonthlyEmissionsTrend($conn, $userId, $months = 6) {
     return $stmt->get_result();
 }
 
-function getCategoryBreakdown($conn, $userId) {
+function getCategoryBreakdown(mysqli $conn, int $userId): mysqli_result {
     $sql = "SELECT 
                 ec.category_name,
                 SUM(ed.emissions_value) as total,
@@ -96,7 +96,7 @@ function getCategoryBreakdown($conn, $userId) {
     return $stmt->get_result();
 }
 
-function getPersonalizedTips($conn, $userId) {
+function getPersonalizedTips(mysqli $conn, int $userId): array {
     //  general tips (no category, no emission level)
     $getGeneralTips = function() use ($conn) {
         $stmt = $conn->prepare(
@@ -222,7 +222,7 @@ function getPersonalizedTips($conn, $userId) {
     return !empty($tips) ? $tips : $getGeneralTips();
 }
 
-function compareWithPreviousMonth($conn, $userId) {
+function compareWithPreviousMonth(mysqli $conn, int $userId): ?array {
     $sql = "SELECT 
                 DATE_FORMAT(record_date, '%Y-%m') as month,
                 SUM(total_carbon_emissions) as total
@@ -258,7 +258,7 @@ function compareWithPreviousMonth($conn, $userId) {
     return null;
 }
 
-function getCurrentMonthEmissions($conn, $userId) {
+function getCurrentMonthEmissions(mysqli $conn, int $userId): float {
     $sql = "SELECT COALESCE(SUM(total_carbon_emissions), 0) as total
             FROM emissions_record
             WHERE user_id = ?
@@ -271,7 +271,7 @@ function getCurrentMonthEmissions($conn, $userId) {
     return $result->fetch_assoc()['total'];
 }
 
-function getPreviousMonthEmissions($conn, $userId) {
+function getPreviousMonthEmissions(mysqli $conn, int $userId): float {
     $sql = "SELECT COALESCE(SUM(total_carbon_emissions), 0) as total
             FROM emissions_record
             WHERE user_id = ?
@@ -284,13 +284,13 @@ function getPreviousMonthEmissions($conn, $userId) {
     return $result->fetch_assoc()['total'];
 }
 
-function getCurrentMonthLevel($conn, $userId) {
+function getCurrentMonthLevel(mysqli $conn, int $userId): string {
     $currentTotal = getCurrentMonthEmissions($conn, $userId);
     //  Use 'monthly' period for current month total
     return getEmissionLevel($currentTotal, 'monthly');
 }
 
-function getLatestEmissionRecord($conn, $userId) {
+function getLatestEmissionRecord(mysqli $conn, int $userId): ?array {
     $sql = "SELECT total_carbon_emissions, record_date, period
             FROM emissions_record 
             WHERE user_id = ? 
