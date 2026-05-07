@@ -347,229 +347,240 @@ while ($row = $categoryBreakdown->fetch_assoc()) {
                 </div>
                 
                 <!-- History and Tips Row -->
-                <div class="row g-3 mb-4">
-                    <!-- Emission History -->
-                    <div class="col-lg-8">
-                        <div class="card h-100 shadow-sm d-flex flex-column">
-
-                        <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                            <div class="d-flex align-items-center">
-                                <h5 class="mb-0">
-                                <i class="bi bi-clock-history"></i> Recent History
-                                </h5>
-                            <span class="badge bg-info ms-2">
-                    <?php echo $totalRecords; ?> total
-                </span>
+                <div class="row">
+    <!-- Recent History -->
+    <div class="col-lg-8 mb-4">
+        <div class="card h-100 shadow-sm">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-clock-history"></i> Recent History
+                    </h5>
+                    <span class="badge bg-info ms-2">
+                        <?php echo $totalRecords; ?> total
+                    </span>
+                </div>
+                <a href="history.php" class="btn btn-sm btn-outline-secondary">
+                    View All
+                </a>
             </div>
-
-            <a href="history.php" class="btn btn-sm btn-outline-secondary">
-                View All
-            </a>
-        </div>
-
-        <div class="card-body overflow-auto">
-            <div class="table-responsive">
-                <table class="table table-sm mb-0">
+            
+            <!-- ✅ FIXED: Removed duplicate table tags and proper structure -->
+            <div class="card-body overflow-auto" style="max-height: 500px;">
+                <?php 
+                $dashboardModalHtml = '';
+                if ($emissionHistory->num_rows > 0): ?>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Date</th>
+                                    <th>Total Emissions</th>
+                                    <th>Level</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
                                 <?php 
-                                $dashboardModalHtml = '';
-                                if ($emissionHistory->num_rows > 0): ?>
-                                    <div class="table-responsive">
-                                        <table class="table table-hover">
-                                            <thead>
-                                                <tr>
-                                                    <th>#</th>
-                                                    <th>Date</th>
-                                                    <th>Total Emissions</th>
-                                                    <th>Level</th>
-                                                    <th>Action</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <?php 
-                                                $count = 1;
-                                                while ($record = $emissionHistory->fetch_assoc()): 
-                                                    //  Use period-aware calculation
-                                                    $period = $record['period'] ?? 'daily';
-                                                    $level = getEmissionLevel((float)$record['total_carbon_emissions'], $period);
-                                                    $levelClass = $level == 'Low' ? 'success' : ($level == 'Medium' ? 'warning' : 'danger');
-                                                    $safeRecordId = intval($record['record_id']);
+                                $count = 1;
+                                while ($record = $emissionHistory->fetch_assoc()): 
+                                    $period = $record['period'] ?? 'daily';
+                                    $level = getEmissionLevel((float)$record['total_carbon_emissions'], $period);
+                                    $levelClass = $level == 'Low' ? 'success' : ($level == 'Medium' ? 'warning' : 'danger');
+                                    $safeRecordId = intval($record['record_id']);
 
-                                                    // Get category breakdown for this record
-                                                    $detailsSql = "SELECT ec.category_name, ed.emissions_value
-                                                            FROM emissions_details ed
-                                                            JOIN emissions_category ec ON ed.category_id = ec.category_id
-                                                            WHERE ed.record_id = ?
-                                                            ORDER BY ed.emissions_value DESC";
-                                                    $detailsStmt = $conn->prepare($detailsSql);
-                                                    $detailsStmt->bind_param("i", $record['record_id']);
-                                                    $detailsStmt->execute();
-                                                    $details = $detailsStmt->get_result();
+                                    // Get category breakdown
+                                    $detailsSql = "SELECT ec.category_name, ed.emissions_value
+                                            FROM emissions_details ed
+                                            JOIN emissions_category ec ON ed.category_id = ec.category_id
+                                            WHERE ed.record_id = ?
+                                            ORDER BY ed.emissions_value DESC";
+                                    $detailsStmt = $conn->prepare($detailsSql);
+                                    $detailsStmt->bind_param("i", $record['record_id']);
+                                    $detailsStmt->execute();
+                                    $details = $detailsStmt->get_result();
 
-                                                    // Build modal HTML
-                                                    ob_start();
-                                                    ?>
-                                                    <!-- Details Modal for Record <?php echo $safeRecordId; ?> -->
-                                                    <div class="modal" id="dashDetailsModal<?php echo $safeRecordId; ?>"
-                                                         tabindex="-1"
-                                                         aria-labelledby="dashDetailsModalLabel<?php echo $safeRecordId; ?>"
-                                                         style="z-index: 9999;">
-                                                        <div class="modal-dialog" style="z-index: 10000;">
-                                                            <div class="modal-content">
-                                                                <div class="modal-header">
-                                                                    <h5 class="modal-title" id="dashDetailsModalLabel<?php echo $safeRecordId; ?>">
-                                                                        Emissions Details - <?php echo date('d M Y', strtotime($record['record_date'])); ?>
-                                                                    </h5>
-                                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                                                </div>
-                                                                <div class="modal-body">
-                                                                    <div class="mb-3">
-                                                                        <div class="d-flex justify-content-between mb-2">
-                                                                            <strong>Total Emissions:</strong>
-                                                                            <span class="badge bg-<?php echo $levelClass; ?>">
-                                                                                <?php echo number_format($record['total_carbon_emissions'], 2); ?> kg CO₂
-                                                                            </span>
-                                                                        </div>
-                                                                    </div>
-                                                                    <h6 class="mb-3">Breakdown by Category:</h6>
-                                                                    <div class="list-group">
-                                                                        <?php if ($details->num_rows > 0): ?>
-                                                                            <?php while ($detail = $details->fetch_assoc()): ?>
-                                                                                <div class="list-group-item">
-                                                                                    <div class="d-flex justify-content-between align-items-center">
-                                                                                        <span>
-                                                                                            <i class="bi bi-circle-fill text-success" style="font-size: 0.5rem;"></i>
-                                                                                            <?php echo htmlspecialchars($detail['category_name']); ?>
-                                                                                        </span>
-                                                                                        <strong><?php echo number_format($detail['emissions_value'], 2); ?> kg CO₂</strong>
-                                                                                    </div>
-                                                                                </div>
-                                                                            <?php endwhile; ?>
-                                                                        <?php else: ?>
-                                                                            <div class="list-group-item">
-                                                                                <small class="text-muted">No category breakdown available</small>
-                                                                            </div>
-                                                                        <?php endif; ?>
-                                                                    </div>
-                                                                </div>
-                                                                <div class="modal-footer">
-                                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                                                    <a href="report.php?id=<?php echo $safeRecordId; ?>" class="btn btn-primary">
-                                                                        <i class="bi bi-file-pdf"></i> Generate Report
-                                                                    </a>
-                                                                </div>
-                                                            </div>
+                                    // Build modal HTML
+                                    ob_start();
+                                    ?>
+                                    <div class="modal fade" id="dashDetailsModal<?php echo $safeRecordId; ?>" 
+                                         tabindex="-1" aria-hidden="true">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title">
+                                                        Emissions Details - <?php echo date('d M Y', strtotime($record['record_date'])); ?>
+                                                    </h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <div class="mb-3">
+                                                        <div class="d-flex justify-content-between mb-2">
+                                                            <strong>Total Emissions:</strong>
+                                                            <span class="badge bg-<?php echo $levelClass; ?>">
+                                                                <?php echo number_format($record['total_carbon_emissions'], 2); ?> kg CO<sub>2</sub>
+                                                            </span>
                                                         </div>
                                                     </div>
-                                                    <?php
-                                                    $dashboardModalHtml .= ob_get_clean();
-                                                    $detailsStmt->close();
-                                                ?>
-                                                    <tr>
-                                                        <td><?php echo $count++; ?></td>
-                                                        <td><?php echo date('d M Y', strtotime($record['record_date'])); ?></td>
-                                                        <td><?php echo number_format($record['total_carbon_emissions'], 2); ?> kg CO₂</td>
-                                                        <td>
-                                                            <span class="badge bg-<?php echo $levelClass; ?>"><?php echo $level; ?></span>
-                                                        </td>
-                                                        <td>
-                                                            <div class="btn-group" role="group">
-                                                                <button type="button" class="btn btn-sm btn-outline-primary view-details-btn"
-                                                                        data-bs-toggle="modal"
-                                                                        data-bs-target="#dashDetailsModal<?php echo $safeRecordId; ?>">
-                                                                    <i class="bi bi-eye"></i> View
-                                                                </button>
-                                                                <a href="report.php?id=<?php echo $safeRecordId; ?>&amp;download=1" class="btn btn-sm btn-outline-success">
-                                                                    <i class="bi bi-download"></i> Download
-                                                                </a>
-                                                                <form method="POST" action="delete_record.php" style="display:inline;"
-                                                                      onsubmit="return confirm('Are you sure you want to delete this record?');">
-                                                                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8'); ?>">
-                                                                    <input type="hidden" name="id" value="<?php echo $safeRecordId; ?>">
-                                                                    <button type="submit" class="btn btn-sm btn-outline-danger">
-                                                                        <i class="bi bi-trash"></i> Delete
-                                                                    </button>
-                                                                </form>
-                                                            </div>                                                            
-                                                        </td>
-                                                    </tr>
-                                                <?php endwhile; ?>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                <?php else: ?>
-                                    <div class="text-center py-5">
-                                        <i class="bi bi-inbox fs-1 text-muted"></i>
-                                        <p class="text-muted mt-3">No emission records yet</p>
-                                        <a href="calculator.php" class="btn btn-success">
-                                            <i class="bi bi-plus-circle"></i> Add Your First Entry
-                                        </a>
-                                    </div>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Personalized Tips -->
-                    <div class="col-lg-4">
-                        <div class="card h-100 shadow-sm d-flex flex-column">
-                        <div class="card-header bg-white">
-                                <h5 class="mb-0">
-                                    <i class="bi bi-lightbulb"></i> Personalized Tips
-                                </h5>
-                            </div>
-                            <div class="card-body overflow-auto" style="max-height: 400px;">
-                            <div class="card-body">
-                                <?php if (!empty($personalizedTips)): ?>
-                                    <div class="list-group list-group-flush">
-                                        <?php foreach ($personalizedTips as $tip): ?>
-                                            <div class="list-group-item border-0 px-0">
-                                                <div class="d-flex w-100 justify-content-between align-items-start">
-                                                    <div>
-                                                        <?php if (!empty($tip['category_name'])): ?>
-                                                            <span class="badge bg-success bg-opacity-10 text-success mb-1" style="font-size:0.7rem;">
-                                                                <i class="bi bi-tag-fill"></i>
-                                                                <?php echo htmlspecialchars($tip['category_name']); ?>
-                                                            </span><br>
+                                                    <h6 class="mb-3">Breakdown by Category:</h6>
+                                                    <div class="list-group">
+                                                        <?php if ($details->num_rows > 0): ?>
+                                                            <?php while ($detail = $details->fetch_assoc()): ?>
+                                                                <div class="list-group-item">
+                                                                    <div class="d-flex justify-content-between align-items-center">
+                                                                        <span>
+                                                                            <i class="bi bi-circle-fill text-success" style="font-size: 0.5rem;"></i>
+                                                                            <?php echo htmlspecialchars($detail['category_name']); ?>
+                                                                        </span>
+                                                                        <strong><?php echo number_format($detail['emissions_value'], 2); ?> kg CO<sub>2</sub></strong>
+                                                                    </div>
+                                                                </div>
+                                                            <?php endwhile; ?>
+                                                        <?php else: ?>
+                                                            <div class="list-group-item">
+                                                                <small class="text-muted">No category breakdown available</small>
+                                                            </div>
                                                         <?php endif; ?>
-                                                        <h6 class="mb-1"><?php echo htmlspecialchars($tip['title']); ?></h6>
                                                     </div>
-                                                    <small><i class="bi bi-lightbulb-fill text-warning"></i></small>
                                                 </div>
-                                                <p class="mb-1 small text-muted">
-                                                    <?php echo nl2br(htmlspecialchars($tip['description'])); ?>
-                                                </p>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                                    <a href="report.php?id=<?php echo $safeRecordId; ?>" class="btn btn-primary">
+                                                        <i class="bi bi-file-pdf"></i> Generate Report
+                                                    </a>
+                                                </div>
                                             </div>
-                                        <?php endforeach; ?>
+                                        </div>
                                     </div>
-                                    <div class="mt-3 text-center">
-                                        <a href="tips.php" class="btn btn-sm btn-outline-success">
-                                            View All Tips <i class="bi bi-arrow-right"></i>
-                                        </a>
-                                    </div>
-                                <?php else: ?>
-                                    <div class="text-center py-4">
-                                        <i class="bi bi-lightbulb fs-1 text-muted"></i>
-                                        <p class="text-muted mt-2">Start tracking your emissions to get personalized tips!</p>
-                                    </div>
-                                <?php endif; ?>
-                            </div>
-                        </div>
+                                    <?php
+                                    $dashboardModalHtml .= ob_get_clean();
+                                    $detailsStmt->close();
+                                ?>
+                                    <tr>
+                                        <td><?php echo $count++; ?></td>
+                                        <td><?php echo date('d M Y', strtotime($record['record_date'])); ?></td>
+                                        <td><?php echo number_format($record['total_carbon_emissions'], 2); ?> kg CO<sub>2</sub></td>
+                                        <td>
+                                            <span class="badge bg-<?php echo $levelClass; ?>"><?php echo $level; ?></span>
+                                        </td>
+                                        <td>
+    <div class="d-flex gap-1 flex-wrap">
+        <button type="button" class="btn btn-sm btn-outline-primary"
+                data-bs-toggle="modal"
+                data-bs-target="#dashDetailsModal<?php echo $safeRecordId; ?>">
+            <i class="bi bi-eye"></i> View
+        </button>
+
+        <a href="report.php?id=<?php echo $safeRecordId; ?>&download=1"
+           class="btn btn-sm btn-outline-success">
+            <i class="bi bi-download"></i> Download
+        </a>
+
+        <form method="POST" action="delete_record.php" class="d-inline"
+              onsubmit="return confirm('Are you sure you want to delete this record?');">
+            <input type="hidden" name="csrf_token"
+                   value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
+            <input type="hidden" name="id" value="<?php echo $safeRecordId; ?>">
+            <button type="submit" class="btn btn-sm btn-outline-danger">
+                <i class="bi bi-trash"></i> Delete
+            </button>
+        </form>
+    </div>
+</td>
+                                    </tr>
+                                <?php endwhile; ?>
+                            </tbody>
+                        </table>
                     </div>
-                </div>
-            </main>
+                <?php else: ?>
+                    <!-- ✅ FIXED: Better empty state -->
+                    <div class="text-center py-5">
+                        <i class="bi bi-inbox" style="font-size: 3rem; color: #ccc;"></i>
+                        <p class="text-muted mt-3 mb-3">No emission records yet</p>
+                        <a href="calculator.php" class="btn btn-success">
+                            <i class="bi bi-plus-circle"></i> Add Your First Entry
+                        </a>
+                    </div>
+                <?php endif; ?>
+            </div>
         </div>
     </div>
     
-    <!-- All Dashboard Detail Modals (Outside Main Content) -->
-    <?php echo $dashboardModalHtml ?? ''; ?>
-    
+    <!-- Personalized Tips -->
+    <div class="col-lg-4 mb-4">
+        <div class="card h-100 shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-lightbulb"></i> Personalized Tips
+                </h5>
+            </div>
+            
+            <!-- ✅ FIXED: Single card-body with proper styling -->
+            <div class="card-body overflow-auto" style="max-height: 500px;">
+                <?php if (!empty($personalizedTips)): ?>
+                    <div class="list-group list-group-flush">
+                        <?php foreach ($personalizedTips as $tip): ?>
+                            <!-- ✅ FIXED: Changed to success/green theme -->
+                            <div class="list-group-item border-0 px-0 mb-3 border-start border-success border-3 ps-3" 
+                                 style="background-color: #f8fff9;">
+                                <div class="d-flex w-100 justify-content-between align-items-start mb-2">
+                                    <div class="flex-grow-1">
+                                        <?php if (!empty($tip['category_name'])): ?>
+                                            <span class="badge bg-success bg-opacity-10 text-success mb-2" 
+                                                  style="font-size: 0.75rem;">
+                                                <i class="bi bi-tag-fill"></i>
+                                                <?php echo htmlspecialchars($tip['category_name']); ?>
+                                            </span>
+                                        <?php endif; ?>
+                                        <h6 class="mb-2 text-success">
+                                            <i class="bi bi-lightbulb-fill"></i>
+                                            <?php echo htmlspecialchars($tip['title']); ?>
+                                        </h6>
+                                        <p class="mb-0 small text-dark">
+                                            <?php echo nl2br(htmlspecialchars($tip['description'])); ?>
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                    <div class="mt-3 text-center">
+                        <a href="tips.php" class="btn btn-sm btn-outline-success">
+                            View All Tips <i class="bi bi-arrow-right"></i>
+                        </a>
+                    </div>
+                <?php else: ?>
+                    <!-- ✅ FIXED: Better empty state with consistent height -->
+                    <div class="text-center py-5">
+                        <i class="bi bi-lightbulb" style="font-size: 3rem; color: #ccc;"></i>
+                        <p class="text-muted mt-3 mb-3">Start tracking your emissions to get personalized tips!</p>
+                        <a href="calculator.php" class="btn btn-outline-success btn-sm">
+                            <i class="bi bi-calculator"></i> Go to Calculator
+                        </a>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ✅ FIXED: Modals should be outside the main content -->
+<?php echo $dashboardModalHtml; ?>
+
+</main>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-    window.dashboardData = {
-        trendLabels:    <?php echo json_encode($trendLabels); ?>,
-        trendData:      <?php echo json_encode($trendData); ?>,
-        categoryLabels: <?php echo json_encode($categoryLabels); ?>,
-        categoryData:   <?php echo json_encode($categoryData); ?>
-    };
-</script>
-<script src="../assets/js/dashboard.js"></script>
+        window.dashboardData = {
+            trendLabels: <?php echo json_encode($trendLabels); ?>,
+            trendData: <?php echo json_encode($trendData); ?>,
+            categoryLabels: <?php echo json_encode($categoryLabels); ?>,
+            categoryData: <?php echo json_encode($categoryData); ?>
+        };
+    </script>
+    <script src="../assets/js/dashboard.js"></script>
+</body>
+</html>

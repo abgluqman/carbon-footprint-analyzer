@@ -58,3 +58,11 @@
 [2026-05-07 06:49:40] [ACTIVITY] User:1 Action:PROFILE_UPDATED IP:::1 Details:Name: Abg Mohd Luqman, Email: abgmohdluqman@gmail.com, Phone: 0123456789, Dept: Group Safety, Security & Sustainability
 [2026-05-07 06:58:57] [ACTIVITY] User:2 Action:LOGIN_SUCCESS IP:::1 Details:User: user 2
 [2026-05-07 07:00:36] [ACTIVITY] User:1 Action:LOGIN_SUCCESS IP:::1 Details:User: Abg Mohd Luqman
+[2026-05-07 07:09:32] [ACTIVITY] User:2 Action:LOGIN_SUCCESS IP:::1 Details:User: user 2
+[2026-05-07 07:18:52] [ACTIVITY] User:2 Action:LOGIN_SUCCESS IP:::1 Details:User: user 2
+[2026-05-07 07:21:40] [ACTIVITY] User:2 Action:LOGIN_SUCCESS IP:::1 Details:User: user 2
+[2026-05-07 07:23:39] [ACTIVITY] User:1 Action:LOGIN_SUCCESS IP:::1 Details:User: Abg Mohd Luqman
+[2026-05-07 09:15:09] [ACTIVITY] User:2 Action:LOGIN_SUCCESS IP:::1 Details:User: user 2
+[2026-05-07 09:15:29] [ACTIVITY] User:1 Action:LOGIN_SUCCESS IP:::1 Details:User: Abg Mohd Luqman
+[2026-05-07 09:47:57] [ACTIVITY] User:2 Action:LOGIN_SUCCESS IP:::1 Details:User: user 2
+[2026-05-07 12:31:36] [ACTIVITY] User:1 Action:LOGIN_SUCCESS IP:::1 Details:User: Abg Mohd Luqman

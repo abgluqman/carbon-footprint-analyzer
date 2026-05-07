@@ -171,3 +171,40 @@ footer {
     background-color: white;
     border-top: 1px solid #dee2e6;
 } 
+
+/* Personalized Tips Styling */
+.tip-card {
+    transition: all 0.3s ease;
+    border-left: 3px solid #198754 !important;
+    background-color: #f8fff9;
+    margin-bottom: 1rem;
+    padding: 1rem;
+    border-radius: 0.25rem;
+}
+
+.tip-card:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    transform: translateX(5px);
+}
+
+.tip-icon {
+    color: #ffc107;
+    font-size: 1.2rem;
+}
+
+/* Consistent card heights */
+.dashboard-row .card {
+    min-height: 500px;
+}
+
+/* Empty state */
+.empty-state {
+    padding: 3rem 1rem;
+    text-align: center;
+}
+
+.empty-state i {
+    font-size: 3rem;
+    color: #dee2e6;
+    margin-bottom: 1rem;
+}

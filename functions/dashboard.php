@@ -117,7 +117,7 @@ function getPersonalizedTips($conn, $userId) {
         return $tips;
     };
 
-    // Get user's latest emission record with period
+    // Get user latest emission record with period
     $stmt = $conn->prepare(
         "SELECT record_id, total_carbon_emissions, period
          FROM emissions_record
@@ -133,7 +133,7 @@ function getPersonalizedTips($conn, $userId) {
         return $getGeneralTips();
     }
 
-    //  Use period-aware emission level calculation
+    //  Use period aware emission level calculation
     $period = $latestRecord['period'] ?? 'daily';
     $level = getEmissionLevel($latestRecord['total_carbon_emissions'], $period);
 
@@ -149,7 +149,7 @@ function getPersonalizedTips($conn, $userId) {
     $stmt->execute();
     $latestCategories = $stmt->get_result();
 
-    // If emissions_details has no rows, the breakdown isn't stored per-category.
+    // If emissions_details has no rows, the breakdown is not stored per-category.
     // Fall back to finding tips by emission level only (no category filter).
     if ($latestCategories->num_rows === 0) {
         $stmt = $conn->prepare(
@@ -317,3 +317,4 @@ function getLatestEmissionRecord($conn, $userId) {
     return null;
 }
 ?>
+
