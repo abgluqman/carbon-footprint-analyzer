@@ -19,3 +19,7 @@
 [2026-04-29 01:53:10] [SECURITY] Event:LOGIN_FAILED_USER_NOT_FOUND IP:::1 Details:Email: abgluqman@gmail.com
 [2026-04-29 01:53:24] [SECURITY] Event:LOGIN_FAILED_USER_NOT_FOUND IP:::1 Details:Email: 82335@siswa.unimas.my
 [2026-04-29 01:53:32] [SECURITY] Event:LOGIN_FAILED_USER_NOT_FOUND IP:::1 Details:Email: abgluqman@gmail.com
+[2026-05-04 11:31:07] [SECURITY] Event:ADMIN_LOGIN_WRONG_PASSWORD IP:::1 Details:Email: admin@carbonanalyzer.com
+[2026-05-04 12:02:45] [SECURITY] Event:LOGIN_FAILED_WRONG_PASSWORD IP:::1 Details:Email: abgmohdluqman@gmail.com
+[2026-05-07 03:29:10] [SECURITY] Event:OVERSIZED_PROFILE_PHOTO IP:::1 Details:User: 1, Size: 7.78 MB, Limit: 5.00 MB
+[2026-05-07 03:29:18] [SECURITY] Event:OVERSIZED_PROFILE_PHOTO IP:::1 Details:User: 1, Size: 9.19 MB, Limit: 5.00 MB

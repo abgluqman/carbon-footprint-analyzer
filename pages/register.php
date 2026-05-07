@@ -38,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 ]);
                 $errors[] = "System error. Please try again later.";
             } else {
-                $stmt->bind_param("s", $email);
+                $stmt->bind_param("ss", $email, $phone);
                 
                 if (!$stmt->execute()) {
                     logError("Failed to execute email check query", [
@@ -87,7 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         ]);
                         $errors[] = "Registration failed. Please try again.";
                     } else {
-                        $stmt->bind_param("ssss", $name, $email, $hashed_password, $department);
+                        $stmt->bind_param("sssss", $name, $email, $phone, $hashed_password, $department);
                         
                         if ($stmt->execute()) {
                             $newUserId = $stmt->insert_id;

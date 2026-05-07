@@ -1,0 +1,16 @@
+[2026-05-07 03:20:47] [ERROR] Exception uploading profile photo {"user_id":1,"error":"Unknown column 'profile_photo_updated_at' in 'field list'"}
+[2026-05-07 03:22:02] [ERROR] Exception uploading profile photo {"user_id":1,"error":"Unknown column 'profile_photo_updated_at' in 'field list'"}
+[2026-05-07 03:29:04] [ERROR] Exception uploading profile photo {"user_id":1,"error":"Unknown column 'profile_photo_updated_at' in 'field list'"}
+[2026-05-07 03:29:29] [ERROR] Exception uploading profile photo {"user_id":1,"error":"Unknown column 'profile_photo_updated_at' in 'field list'"}
+[2026-05-07 03:35:04] [ERROR] Exception uploading profile photo {"user_id":1,"error":"Unknown column 'profile_photo_updated_at' in 'field list'"}
+[2026-05-07 03:57:42] [ERROR] Exception uploading profile photo {"user_id":2,"error":"Unknown column 'profile_photo_updated_at' in 'field list'"}
+[2026-05-07 06:08:28] [ERROR] Exception uploading profile photo {"user_id":2,"error":"Unknown column 'profile_photo_updated_at' in 'field list'"}
+[2026-05-07 06:08:34] [ERROR] Exception uploading profile photo {"user_id":2,"error":"Unknown column 'profile_photo_updated_at' in 'field list'"}
+[2026-05-07 06:08:51] [ERROR] Exception uploading profile photo {"user_id":2,"error":"Unknown column 'profile_photo_updated_at' in 'field list'"}
+[2026-05-07 06:10:31] [ERROR] Exception uploading profile photo {"user_id":2,"error":"Unknown column 'profile_photo_updated_at' in 'field list'"}
+[2026-05-07 06:11:19] [ERROR] Exception uploading profile photo {"user_id":2,"error":"Unknown column 'profile_photo_updated_at' in 'field list'"}
+[2026-05-07 06:11:56] [ERROR] Exception uploading profile photo {"user_id":1,"error":"Unknown column 'profile_photo_updated_at' in 'field list'"}
+[2026-05-07 06:17:55] [ERROR] Exception uploading profile photo {"user_id":1,"error":"Unknown column 'profile_photo_updated_at' in 'field list'"}
+[2026-05-07 06:22:13] [ERROR] Exception uploading profile photo {"user_id":1,"error":"Unknown column 'profile_photo_updated_at' in 'field list'"}
+[2026-05-07 06:26:19] [ERROR] Exception uploading profile photo {"user_id":1,"error":"Unknown column 'profile_photo_updated_at' in 'field list'"}
+[2026-05-07 06:26:32] [ERROR] Exception uploading profile photo {"user_id":1,"error":"Unknown column 'profile_photo_updated_at' in 'field list'"}

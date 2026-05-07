@@ -250,7 +250,7 @@ $departmentData = $conn->query($sql);
                         <h5 class="mb-0"><i class="bi bi-graph-up"></i> 6-Month Trend</h5>
                     </div>
                     <div class="card-body">
-                        <canvas id="trendChart" height="80"></canvas>
+                        <canvas id="trendChart" height="143"></canvas>
                     </div>
                 </div>
             </div>
@@ -308,75 +308,87 @@ $departmentData = $conn->query($sql);
         </div>
         
         <!-- Recent Activity -->
-        <div class="row g-3">
-            <!-- Recent Users -->
-            <div class="col-lg-6">
-                <div class="card border-0 shadow-sm">
-                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0"><i class="bi bi-person-plus"></i> Recent Users</h5>
-                        <a href="users.php" class="btn btn-sm btn-outline-secondary">View All</a>
-                    </div>
-                    <div class="card-body">
-                        <div class="list-group list-group-flush">
-                            <?php while ($user = $recentUsers->fetch_assoc()): ?>
-                                <div class="list-group-item px-0">
-                                    <div class="d-flex justify-content-between align-items-start">
-                                        <div>
-                                            <h6 class="mb-1"><?php echo htmlspecialchars($user['name']); ?></h6>
-                                            <p class="mb-1 small text-muted">
-                                                <i class="bi bi-envelope"></i> <?php echo htmlspecialchars($user['email']); ?>
-                                            </p>
-                                            <p class="mb-0 small text-muted">
-                                                <i class="bi bi-building"></i> <?php echo htmlspecialchars($user['department']); ?>
-                                            </p>
-                                        </div>
-                                        <small class="text-muted">
-                                            <?php echo date('d M Y', strtotime($user['created_at'])); ?>
-                                        </small>
-                                    </div>
-                                </div>
-                            <?php endwhile; ?>
-                        </div>
-                    </div>
-                </div>
+<div class="row g-3">
+
+    <!-- Recent Users -->
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm h-100 d-flex flex-column">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-person-plus"></i> Recent Users</h5>
+                <a href="users.php" class="btn btn-sm btn-outline-secondary">View All</a>
             </div>
-            
-            <!-- Recent Records -->
-            <div class="col-lg-6">
-                <div class="card border-0 shadow-sm">
-                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0"><i class="bi bi-clock-history"></i> Recent Emissions</h5>
-                        <a href="emissions_records.php" class="btn btn-sm btn-outline-secondary">View All</a>
-                    </div>
-                    <div class="card-body">
-                        <div class="list-group list-group-flush">
-                            <?php while ($record = $recentRecords->fetch_assoc()): 
-                                $level = $record['total_carbon_emissions'] < 50 ? 'Low' : 
-                                        ($record['total_carbon_emissions'] < 100 ? 'Medium' : 'High');
-                                $levelClass = $level == 'Low' ? 'success' : ($level == 'Medium' ? 'warning' : 'danger');
-                            ?>
-                                <div class="list-group-item px-0">
-                                    <div class="d-flex justify-content-between align-items-start">
-                                        <div>
-                                            <h6 class="mb-1"><?php echo htmlspecialchars($record['user_name']); ?></h6>
-                                            <p class="mb-1 small">
-                                                <strong><?php echo number_format($record['total_carbon_emissions'], 2); ?> kg CO₂</strong>
-                                                <span class="badge bg-<?php echo $levelClass; ?> ms-2"><?php echo $level; ?></span>
-                                            </p>
-                                            <p class="mb-0 small text-muted">
-                                                <i class="bi bi-calendar"></i> 
-                                                <?php echo date('d M Y', strtotime($record['record_date'])); ?>
-                                            </p>
-                                        </div>
-                                    </div>
+
+            <div class="card-body overflow-auto" style="max-height: 420px;">
+                <div class="list-group list-group-flush">
+                    <?php while ($user = $recentUsers->fetch_assoc()): ?>
+                        <div class="list-group-item px-0">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="mb-1"><?php echo htmlspecialchars($user['name']); ?></h6>
+                                    <p class="mb-1 small text-muted">
+                                        <i class="bi bi-envelope"></i>
+                                        <?php echo htmlspecialchars($user['email']); ?>
+                                    </p>
+                                    <p class="mb-0 small text-muted">
+                                        <i class="bi bi-building"></i>
+                                        <?php echo htmlspecialchars($user['department']); ?>
+                                    </p>
                                 </div>
-                            <?php endwhile; ?>
+
+                                <small class="text-muted">
+                                    <?php echo date('d M Y', strtotime($user['created_at'])); ?>
+                                </small>
+                            </div>
                         </div>
-                    </div>
+                    <?php endwhile; ?>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Recent Emissions -->
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm h-100 d-flex flex-column">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-clock-history"></i> Recent Emissions</h5>
+                <a href="emissions_records.php" class="btn btn-sm btn-outline-secondary">View All</a>
+            </div>
+
+            <div class="card-body overflow-auto" style="max-height: 420px;">
+                <div class="list-group list-group-flush">
+                    <?php while ($record = $recentRecords->fetch_assoc()):
+                        $level = $record['total_carbon_emissions'] < 50 ? 'Low' :
+                                ($record['total_carbon_emissions'] < 100 ? 'Medium' : 'High');
+                        $levelClass = $level == 'Low' ? 'success' : ($level == 'Medium' ? 'warning' : 'danger');
+                    ?>
+                        <div class="list-group-item px-0">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="mb-1"><?php echo htmlspecialchars($record['user_name']); ?></h6>
+
+                                    <p class="mb-1 small">
+                                        <strong>
+                                            <?php echo number_format($record['total_carbon_emissions'], 2); ?> kg CO₂
+                                        </strong>
+                                        <span class="badge bg-<?php echo $levelClass; ?> ms-2">
+                                            <?php echo $level; ?>
+                                        </span>
+                                    </p>
+
+                                    <p class="mb-0 small text-muted">
+                                        <i class="bi bi-calendar"></i>
+                                        <?php echo date('d M Y', strtotime($record['record_date'])); ?>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endwhile; ?>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
