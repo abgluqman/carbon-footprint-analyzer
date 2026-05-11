@@ -31,6 +31,9 @@ if ($res) {
     <nav class="navbar navbar-expand-lg navbar-light bg-light shadow-sm">
         
         <div class="container">
+            <a class="navbar-brand" href="dashboard.php">
+    <img src="assets/images/Bportlogo.png" alt="Logo" width="50" height="40" class="me-2">
+</a>
 
             <a class="navbar-brand text-success fw-bold" href="index.php">
                 Carbon Analyzer
@@ -290,7 +293,8 @@ if ($res) {
                 </div>
                 <div class="col-md-6 text-md-end">
                     <p class="small mb-0">
-                        &copy; <?php echo date('Y'); ?> Carbon Footprint Analyzer. All rights reserved.
+                        &copy; <?php echo date('Y'); ?> Carbon Footprint Analyzer Made for Bintulu 
+                        Port Holdings Berhad. All rights reserved.
                     </p>
                     
                 </div>

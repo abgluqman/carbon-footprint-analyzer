@@ -70,3 +70,13 @@
 [2026-05-07 13:13:11] [ACTIVITY] User:1 Action:EMISSION_ADDED IP:::1 Details:Period: weekly, Date: 2026-05-07, Total: 67.00 kg, Categories: 1
 [2026-05-07 13:27:12] [ACTIVITY] User:1 Action:LOGIN_SUCCESS IP:::1 Details:User: Abg Mohd Luqman
 [2026-05-07 13:45:12] [ACTIVITY] User:1 Action:EMISSION_ADDED IP:::1 Details:Period: daily, Date: 2026-05-07, Total: 1.19 kg, Categories: 1
+[2026-05-09 07:21:13] [ACTIVITY] User:3 Action:USER_REGISTERED IP:::1 Details:Name: NUR ANNISA, Email: 82803@siswa.unimas.my, Phone: 0199674720, Department: Group Finance
+[2026-05-09 07:21:41] [ACTIVITY] User:3 Action:LOGIN_SUCCESS IP:::1 Details:User: NUR ANNISA
+[2026-05-09 07:25:26] [ACTIVITY] User:3 Action:EMISSION_ADDED IP:::1 Details:Period: daily, Date: 2026-05-09, Total: 27.66 kg, Categories: 6
+[2026-05-09 07:29:39] [ACTIVITY] User:3 Action:EMISSION_ADDED IP:::1 Details:Period: monthly, Date: 2026-05-09, Total: 27.77 kg, Categories: 5
+[2026-05-09 07:42:05] [ACTIVITY] User:1 Action:ADMIN_LOGIN_SUCCESS IP:::1 Details:Admin: Administrator
+[2026-05-09 22:01:12] [ACTIVITY] User:2 Action:LOGIN_SUCCESS IP:::1 Details:User: user 2
+[2026-05-09 22:28:42] [ACTIVITY] User:1 Action:ADMIN_LOGIN_SUCCESS IP:::1 Details:Admin: Administrator
+[2026-05-11 14:49:24] [ACTIVITY] User:2 Action:LOGIN_SUCCESS IP:::1 Details:User: user 2
+[2026-05-11 14:52:37] [ACTIVITY] User:1 Action:LOGIN_SUCCESS IP:::1 Details:User: Abg Mohd Luqman
+[2026-05-11 15:02:13] [ACTIVITY] User:1 Action:EMISSION_ADDED IP:::1 Details:Period: daily, Date: 2026-05-11, Total: 81.16 kg, Categories: 6

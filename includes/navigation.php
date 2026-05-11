@@ -29,6 +29,7 @@ if (isset($_SESSION['user_id'])) {
 
         <!-- Brand -->
         <a class="navbar-brand" href="dashboard.php">
+            <img src="../assets/images/Bportlogo.png" alt="Logo" width="50" height="30" class="me-2">
             <i class="bi bi-leaf"></i> Carbon Footprint Analyzer
         </a>
 
