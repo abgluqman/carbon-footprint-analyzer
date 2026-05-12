@@ -208,3 +208,39 @@ footer {
     color: #dee2e6;
     margin-bottom: 1rem;
 }
+
+/*Dashboard history section*/
+/* Period Type Badges */
+.period-badge {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.5rem;
+    font-weight: 600;
+}
+
+.badge-daily {
+    background-color: #0d6efd;
+    color: white;
+}
+
+.badge-weekly {
+    background-color: #6610f2;
+    color: white;
+}
+
+.badge-monthly {
+    background-color: #d63384;
+    color: white;
+}
+
+/* Hover effects */
+.badge-daily:hover {
+    background-color: #0b5ed7;
+}
+
+.badge-weekly:hover {
+    background-color: #520dc2;
+}
+
+.badge-monthly:hover {
+    background-color: #ab296a;
+}

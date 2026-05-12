@@ -70,6 +70,36 @@ while ($row = $categoryBreakdown->fetch_assoc()) {
     $categoryLabels[] = $row['category_name'];
     $categoryData[] = round($row['total'], 2);
 }
+
+// Period filter for dashboard
+$allowedPeriods = ['all', 'daily', 'weekly', 'monthly'];
+$periodFilter = isset($_GET['period']) && in_array($_GET['period'], $allowedPeriods)
+    ? $_GET['period']
+    : 'all';
+
+//  Recent emissions with period filter
+if ($periodFilter === 'all') {
+    $sql = "SELECT record_id, user_id, record_date, total_carbon_emissions, period 
+            FROM emissions_record 
+            WHERE user_id = ? 
+            ORDER BY record_date DESC 
+            LIMIT 5";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("i", $userId);
+} else {
+    $sql = "SELECT record_id, user_id, record_date, total_carbon_emissions, period 
+            FROM emissions_record 
+            WHERE user_id = ? AND period = ?
+            ORDER BY record_date DESC 
+            LIMIT 5";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("is", $userId, $periodFilter);
+}
+
+$stmt->execute();
+$emissionHistory = $stmt->get_result();
+$stmt->close();
+
 ?>
 
 <!DOCTYPE html>
@@ -349,160 +379,225 @@ while ($row = $categoryBreakdown->fetch_assoc()) {
                 <!-- History and Tips Row -->
                 <div class="row">
                 <!-- Recent History -->
-                <div class="col-lg-8 mb-4">
-                    <div class="card h-100 shadow-sm">
-                        <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                            <div class="d-flex align-items-center">
-                                <h5 class="mb-0">
-                                    <i class="bi bi-clock-history"></i> Recent History
-                                </h5>
-                            <span class="badge bg-info ms-2">
-                            <?php echo $totalRecords; ?> total
-                            </span>
-                            </div>
-                        <a href="history.php" class="btn btn-sm btn-outline-secondary">View All
-                </a>
+<div class="col-lg-8 mb-4">
+    <div class="card h-100 shadow-sm">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center">
+                <h5 class="mb-0">
+                    <i class="bi bi-clock-history"></i> Recent History
+                </h5>
+                <span class="badge bg-info ms-2">
+                    <?php echo $totalRecords; ?> total
+                </span>
             </div>
-            
-            <div class="card-body overflow-auto" style="max-height: 500px;">
-                <?php 
-                $dashboardModalHtml = '';
-                if ($emissionHistory->num_rows > 0): ?>
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead>
-                                <tr>
-                                    <th>#</th>
-                                    <th>Date</th>
-                                    <th>Total Emissions</th>
-                                    <th>Level</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php 
-                                $count = 1;
-                                while ($record = $emissionHistory->fetch_assoc()): 
-                                    $period = $record['period'] ?? 'daily';
-                                    $level = getEmissionLevel((float)$record['total_carbon_emissions'], $period);
-                                    $levelClass = $level == 'Low' ? 'success' : ($level == 'Medium' ? 'warning' : 'danger');
-                                    $safeRecordId = intval($record['record_id']);
+            <a href="history.php" class="btn btn-sm btn-outline-secondary">
+                View All
+            </a>
+        </div>
+        
+        <div class="card-body overflow-auto" style="max-height: 500px;">
+            <?php 
+            $dashboardModalHtml = '';
+            if ($emissionHistory->num_rows > 0): ?>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Date/Period</th>
+                                <th>Period Type</th>
+                                <th>Total Emissions</th>
+                                <th>Level</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php 
+                            $count = 1;
+                            while ($record = $emissionHistory->fetch_assoc()): 
+                                $recordPeriod = $record['period'] ?? 'daily';
+                                $level = getEmissionLevel((float)$record['total_carbon_emissions'], $recordPeriod);
+                                $levelClass = $level == 'Low' ? 'success' : ($level == 'Medium' ? 'warning' : 'danger');
+                                $safeRecordId = intval($record['record_id']);
+                                
+                                // ✅ ADDED: Format date based on period type
+                                $dateDisplay = '';
+                                $dateCaption = '';
+                                
+                                switch ($recordPeriod) {
+                                    case 'daily':
+                                        $dateDisplay = date('d M Y', strtotime($record['record_date']));
+                                        $dateCaption = date('l', strtotime($record['record_date']));
+                                        break;
+                                        
+                                    case 'weekly':
+                                        $dateTime = new DateTime($record['record_date']);
+                                        $weekStart = clone $dateTime;
+                                        $weekStart->modify('Monday this week');
+                                        $weekEnd = clone $weekStart;
+                                        $weekEnd->modify('+6 days');
+                                        $dateDisplay = $weekStart->format('d M') . ' - ' . $weekEnd->format('d M Y');
+                                        $dateCaption = 'Week ' . $dateTime->format('W, Y');
+                                        break;
+                                        
+                                    case 'monthly':
+                                        $dateDisplay = date('F Y', strtotime($record['record_date']));
+                                        $dateCaption = date('M Y', strtotime($record['record_date']));
+                                        break;
+                                }
 
-                                    // Get category breakdown
-                                    $detailsSql = "SELECT ec.category_name, ed.emissions_value
-                                            FROM emissions_details ed
-                                            JOIN emissions_category ec ON ed.category_id = ec.category_id
-                                            WHERE ed.record_id = ?
-                                            ORDER BY ed.emissions_value DESC";
-                                    $detailsStmt = $conn->prepare($detailsSql);
-                                    $detailsStmt->bind_param("i", $record['record_id']);
-                                    $detailsStmt->execute();
-                                    $details = $detailsStmt->get_result();
+                                // Get category breakdown
+                                $detailsSql = "SELECT ec.category_name, ed.emissions_value
+                                        FROM emissions_details ed
+                                        JOIN emissions_category ec ON ed.category_id = ec.category_id
+                                        WHERE ed.record_id = ?
+                                        ORDER BY ed.emissions_value DESC";
+                                $detailsStmt = $conn->prepare($detailsSql);
+                                $detailsStmt->bind_param("i", $record['record_id']);
+                                $detailsStmt->execute();
+                                $details = $detailsStmt->get_result();
 
-                                    
-                                    ob_start();
-                                    ?>
-                                    <div class="modal fade" id="dashDetailsModal<?php echo $safeRecordId; ?>" 
-                                         tabindex="-1" aria-hidden="true">
-                                        <div class="modal-dialog">
-                                            <div class="modal-content">
-                                                <div class="modal-header">
-                                                    <h5 class="modal-title">
-                                                        Emissions Details - <?php echo date('d M Y', strtotime($record['record_date'])); ?>
-                                                    </h5>
-                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                                </div>
-                                                <div class="modal-body">
-                                                    <div class="mb-3">
-                                                        <div class="d-flex justify-content-between mb-2">
-                                                            <strong>Total Emissions:</strong>
-                                                            <span class="badge bg-<?php echo $levelClass; ?>">
-                                                                <?php echo number_format($record['total_carbon_emissions'], 2); ?> kg CO<sub>2</sub>
-                                                            </span>
-                                                        </div>
+                                // Build modal HTML
+                                ob_start();
+                                ?>
+                                <div class="modal fade" id="dashDetailsModal<?php echo $safeRecordId; ?>" 
+                                     tabindex="-1" aria-hidden="true">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">
+                                                    <i class="bi bi-info-circle"></i> 
+                                                    Emissions Details
+                                                    <span class="badge badge-<?php echo $recordPeriod; ?> ms-2 period-badge">
+                                                        <?php echo ucfirst($recordPeriod); ?>
+                                                    </span>
+                                                </h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <div class="mb-3">
+                                                    <div class="d-flex justify-content-between mb-2">
+                                                        <strong>Period:</strong>
+                                                        <span><?php echo htmlspecialchars($dateDisplay); ?></span>
                                                     </div>
-                                                    <h6 class="mb-3">Breakdown by Category:</h6>
-                                                    <div class="list-group">
-                                                        <?php if ($details->num_rows > 0): ?>
-                                                            <?php while ($detail = $details->fetch_assoc()): ?>
-                                                                <div class="list-group-item">
-                                                                    <div class="d-flex justify-content-between align-items-center">
-                                                                        <span>
-                                                                            <i class="bi bi-circle-fill text-success" style="font-size: 0.5rem;"></i>
-                                                                            <?php echo htmlspecialchars($detail['category_name']); ?>
-                                                                        </span>
-                                                                        <strong><?php echo number_format($detail['emissions_value'], 2); ?> kg CO<sub>2</sub></strong>
-                                                                    </div>
-                                                                </div>
-                                                            <?php endwhile; ?>
-                                                        <?php else: ?>
+                                                    <div class="d-flex justify-content-between mb-2">
+                                                        <strong>Type:</strong>
+                                                        <span class="badge badge-<?php echo $recordPeriod; ?> period-badge">
+                                                            <i class="bi bi-calendar-<?php echo $recordPeriod == 'daily' ? 'day' : ($recordPeriod == 'weekly' ? 'week' : '3'); ?>"></i>
+                                                            <?php echo ucfirst($recordPeriod); ?>
+                                                        </span>
+                                                    </div>
+                                                    <div class="d-flex justify-content-between mb-2">
+                                                        <strong>Total Emissions:</strong>
+                                                        <span class="badge bg-<?php echo $levelClass; ?>">
+                                                            <?php echo number_format($record['total_carbon_emissions'], 2); ?> kg CO<sub>2</sub>
+                                                        </span>
+                                                    </div>
+                                                    <div class="d-flex justify-content-between">
+                                                        <strong>Emission Level:</strong>
+                                                        <span class="badge bg-<?php echo $levelClass; ?>">
+                                                            <?php echo $level; ?>
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                
+                                                <h6 class="mb-3 mt-4">
+                                                    <i class="bi bi-pie-chart"></i> Breakdown by Category:
+                                                </h6>
+                                                <div class="list-group">
+                                                    <?php if ($details->num_rows > 0): ?>
+                                                        <?php while ($detail = $details->fetch_assoc()): ?>
                                                             <div class="list-group-item">
-                                                                <small class="text-muted">No category breakdown available</small>
+                                                                <div class="d-flex justify-content-between align-items-center">
+                                                                    <span>
+                                                                        <i class="bi bi-circle-fill text-success" style="font-size: 0.5rem;"></i>
+                                                                        <?php echo htmlspecialchars($detail['category_name']); ?>
+                                                                    </span>
+                                                                    <strong><?php echo number_format($detail['emissions_value'], 2); ?> kg CO<sub>2</sub></strong>
+                                                                </div>
                                                             </div>
-                                                        <?php endif; ?>
-                                                    </div>
+                                                        <?php endwhile; ?>
+                                                    <?php else: ?>
+                                                        <div class="list-group-item">
+                                                            <small class="text-muted">No category breakdown available</small>
+                                                        </div>
+                                                    <?php endif; ?>
                                                 </div>
-                                                <div class="modal-footer">
-                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                                    <a href="report.php?id=<?php echo $safeRecordId; ?>" class="btn btn-primary">
-                                                        <i class="bi bi-file-pdf"></i> Generate Report
-                                                    </a>
-                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                                <a href="report.php?id=<?php echo $safeRecordId; ?>" class="btn btn-primary">
+                                                    <i class="bi bi-file-pdf"></i> Generate Report
+                                                </a>
                                             </div>
                                         </div>
                                     </div>
-                                    <?php
-                                    $dashboardModalHtml .= ob_get_clean();
-                                    $detailsStmt->close();
-                                ?>
-                                    <tr>
-                                        <td><?php echo $count++; ?></td>
-                                        <td><?php echo date('d M Y', strtotime($record['record_date'])); ?></td>
-                                        <td><?php echo number_format($record['total_carbon_emissions'], 2); ?> kg CO<sub>2</sub></td>
-                                        <td>
-                                            <span class="badge bg-<?php echo $levelClass; ?>"><?php echo $level; ?></span>
-                                        </td>
-                                        <td>
-    <div class="d-flex gap-1 flex-wrap">
-        <button type="button" class="btn btn-sm btn-outline-primary"
-                data-bs-toggle="modal"
-                data-bs-target="#dashDetailsModal<?php echo $safeRecordId; ?>">
-            <i class="bi bi-eye"></i> View
-        </button>
-
-        <a href="report.php?id=<?php echo $safeRecordId; ?>&download=1"
-           class="btn btn-sm btn-outline-success">
-            <i class="bi bi-download"></i> Download
-        </a>
-
-        <form method="POST" action="delete_record.php" class="d-inline"
-              onsubmit="return confirm('Are you sure you want to delete this record?');">
-            <input type="hidden" name="csrf_token"
-                   value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
-            <input type="hidden" name="id" value="<?php echo $safeRecordId; ?>">
-            <button type="submit" class="btn btn-sm btn-outline-danger">
-                <i class="bi bi-trash"></i> Delete
-            </button>
-        </form>
-    </div>
-</td>
-                                    </tr>
-                                <?php endwhile; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                <?php else: ?>
-                    <div class="text-center py-5">
-                        <i class="bi bi-inbox" style="font-size: 3rem; color: #ccc;"></i>
-                        <p class="text-muted mt-3 mb-3">No emission records yet</p>
-                        <a href="calculator.php" class="btn btn-success">
-                            <i class="bi bi-plus-circle"></i> Add Your First Entry
-                        </a>
-                    </div>
-                <?php endif; ?>
-            </div>
+                                </div>
+                                <?php
+                                $dashboardModalHtml .= ob_get_clean();
+                                $detailsStmt->close();
+                            ?>
+                                <tr>
+                                    <td><?php echo $count++; ?></td>
+                                    <td>
+                                        <strong><?php echo htmlspecialchars($dateDisplay); ?></strong>
+                                        <?php if ($dateCaption): ?>
+                                        <br>
+                                        <small class="text-muted"><?php echo htmlspecialchars($dateCaption); ?></small>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <!-- ✅ ADDED: Period type badge -->
+                                        <span class="badge period-badge badge-<?php echo $recordPeriod; ?>">
+                                            <i class="bi bi-calendar-<?php echo $recordPeriod == 'daily' ? 'day' : ($recordPeriod == 'weekly' ? 'week' : '3'); ?>"></i>
+                                            <?php echo ucfirst($recordPeriod); ?>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <?php echo number_format($record['total_carbon_emissions'], 2); ?> kg CO<sub>2</sub>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-<?php echo $levelClass; ?>"><?php echo $level; ?></span>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <button type="button" class="btn btn-outline-primary"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#dashDetailsModal<?php echo $safeRecordId; ?>">
+                                                <i class="bi bi-eye"></i> View
+                                            </button>
+                                            <a href="report.php?id=<?php echo $safeRecordId; ?>&download=1" 
+                                               class="btn btn-outline-success">
+                                                <i class="bi bi-download"></i>
+                                            </a>
+                                            <form method="POST" action="delete_record.php" style="display:inline;"
+                                                  onsubmit="return confirm('Are you sure you want to delete this record?');">
+                                                <input type="hidden" name="csrf_token" 
+                                                       value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
+                                                <input type="hidden" name="id" value="<?php echo $safeRecordId; ?>">
+                                                <button type="submit" class="btn btn-outline-danger">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <?php endwhile; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php else: ?>
+                <div class="text-center py-5">
+                    <i class="bi bi-inbox" style="font-size: 3rem; color: #ccc;"></i>
+                    <p class="text-muted mt-3 mb-3">No emission records yet</p>
+                    <a href="calculator.php" class="btn btn-success">
+                        <i class="bi bi-plus-circle"></i> Add Your First Entry
+                    </a>
+                </div>
+            <?php endif; ?>
         </div>
     </div>
+</div>
     
     <!-- Personalized Tips -->
     <div class="col-lg-4 mb-4">
