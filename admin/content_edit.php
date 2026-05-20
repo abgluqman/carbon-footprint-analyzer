@@ -81,7 +81,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (empty($contentType)) $errors[] = "Content type is required";
     
     //  Validate content_type/emissions_level against whitelist
-    $allowedContentTypes = ['tip', 'article', 'video'];
+    $allowedContentTypes = ['tip', 'article', 'photo'];
     if (!in_array($contentType, $allowedContentTypes)) {
         $errors[] = "Invalid content type";
         logSecurity('INVALID_CONTENT_TYPE_EDIT', "Admin: $adminId, Content: $contentId, Attempted: $contentType");
@@ -383,8 +383,8 @@ try {
                                         <option value="article" <?php echo ($content['content_type'] == 'article') ? 'selected' : ''; ?>>
                                             Article
                                         </option>
-                                        <option value="video" <?php echo ($content['content_type'] == 'video') ? 'selected' : ''; ?>>
-                                            Video
+                                        <option value="photo" <?php echo ($content['content_type'] == 'photo') ? 'selected' : ''; ?>>
+                                            Photo
                                         </option>
                                     </select>
                                 </div>
@@ -507,11 +507,10 @@ try {
                             <li>Provide context and examples</li>
                         </ul>
                         
-                        <h6 class="text-success mt-3">Videos</h6>
+                        <h6 class="text-success mt-3">Photos</h6>
                         <ul class="small">
-                            <li>Educational video content</li>
-                            <li>Multimedia presentations</li>
-                            <li>Step-by-step visual guides</li>
+                            <li>Educational photos content</li>
+                            <li>Media presentations</li>
                         </ul>
                         
                         <hr>

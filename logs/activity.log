@@ -81,3 +81,16 @@
 [2026-05-11 14:52:37] [ACTIVITY] User:1 Action:LOGIN_SUCCESS IP:::1 Details:User: Abg Mohd Luqman
 [2026-05-11 15:02:13] [ACTIVITY] User:1 Action:EMISSION_ADDED IP:::1 Details:Period: daily, Date: 2026-05-11, Total: 81.16 kg, Categories: 6
 [2026-05-12 16:53:03] [ACTIVITY] User:1 Action:LOGIN_SUCCESS IP:::1 Details:User: Abg Mohd Luqman
+[2026-05-13 13:47:16] [ACTIVITY] User:1 Action:LOGIN_SUCCESS IP:::1 Details:User: Abg Mohd Luqman
+[2026-05-18 01:19:09] [ACTIVITY] User:1 Action:LOGIN_SUCCESS IP:::1 Details:User: Abg Mohd Luqman
+[2026-05-18 03:31:07] [ACTIVITY] User:1 Action:ADMIN_LOGIN_SUCCESS IP:::1 Details:Admin: Administrator
+[2026-05-18 04:19:48] [ACTIVITY] User:1 Action:ADMIN_LOGIN_SUCCESS IP:::1 Details:Admin: Administrator
+[2026-05-18 12:43:52] [ACTIVITY] User:1 Action:ADMIN_LOGIN_SUCCESS IP:::1 Details:Admin: Administrator
+[2026-05-18 13:10:30] [ACTIVITY] User:1 Action:LOGIN_SUCCESS IP:::1 Details:User: Abg Mohd Luqman
+[2026-05-18 13:20:53] [ACTIVITY] User:1 Action:ADMIN_LOGIN_SUCCESS IP:::1 Details:Admin: Administrator
+[2026-05-18 14:07:46] [ACTIVITY] User:1 Action:LOGIN_SUCCESS IP:::1 Details:User: Abg Mohd Luqman
+[2026-05-18 14:37:51] [ACTIVITY] User:1 Action:ADMIN_LOGIN_SUCCESS IP:::1 Details:Admin: Administrator
+[2026-05-20 12:51:29] [ACTIVITY] User:1 Action:ADMIN_LOGIN_SUCCESS IP:::1 Details:Admin: Administrator
+[2026-05-20 12:57:00] [ACTIVITY] User:1 Action:CONTENT_ADD_VALIDATION_FAILED IP:::1 Details:Errors: Only valid JPG, PNG, and GIF images are allowed
+[2026-05-20 13:00:49] [ACTIVITY] User:1 Action:CONTENT_ADD_VALIDATION_FAILED IP:::1 Details:Errors: Only valid JPG, PNG, and GIF images are allowed
+[2026-05-20 13:02:31] [ACTIVITY] User:1 Action:CONTENT_ADD_VALIDATION_FAILED IP:::1 Details:Errors: Only valid JPG, PNG, and GIF images are allowed

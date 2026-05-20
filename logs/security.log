@@ -26,3 +26,7 @@
 [2026-05-07 07:12:29] [SECURITY] Event:CSRF_VIOLATION_PROFILE IP:::1 Details:User ID: 2
 [2026-05-07 07:12:35] [SECURITY] Event:CSRF_VIOLATION_PROFILE IP:::1 Details:User ID: 2
 [2026-05-12 16:52:52] [SECURITY] Event:LOGIN_FAILED_WRONG_PASSWORD IP:::1 Details:Email: abgmohdluqman@gmail.com
+[2026-05-18 13:59:27] [SECURITY] Event:LOGIN_FAILED_USER_NOT_FOUND IP:::1 Details:Email: abangluqmantahir@gmail.com
+[2026-05-20 12:57:00] [SECURITY] Event:INVALID_IMAGE_UPLOAD IP:::1 Details:Admin: 1, MIME: video/mp4, Original: video/mp4
+[2026-05-20 13:00:49] [SECURITY] Event:INVALID_IMAGE_UPLOAD IP:::1 Details:Admin: 1, MIME: video/mp4, Original: video/mp4
+[2026-05-20 13:02:31] [SECURITY] Event:INVALID_IMAGE_UPLOAD IP:::1 Details:Admin: 1, MIME: video/mp4, Original: video/mp4

@@ -32,8 +32,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (strlen($description) > 10000) $errors[] = "Description must be 10,000 characters or less";
     if (empty($contentType)) $errors[] = "Content type is required";
     
-    // Validate content_type/emissions_level against whitelist
-    $allowedContentTypes = ['tip', 'article', 'video'];
+    // Validate content_type/emissions_level 
+    $allowedContentTypes = ['tip', 'article', 'photo'];
     if (!in_array($contentType, $allowedContentTypes)) {
         $errors[] = "Invalid content type";
         logSecurity('INVALID_CONTENT_TYPE', "Admin: $adminId, Attempted: $contentType");
@@ -228,7 +228,7 @@ try {
     
     if (!$categories) {
         logError("Failed to fetch categories", ['error' => $conn->error]);
-        $categories = null; // Will show error in UI
+        $categories = null; 
     }
 } catch (Exception $e) {
     logError("Exception fetching categories", ['error' => $e->getMessage()]);
@@ -309,8 +309,8 @@ try {
                                         <option value="article" <?php echo (isset($_POST['content_type']) && $_POST['content_type'] == 'article') ? 'selected' : ''; ?>>
                                             Article
                                         </option>
-                                        <option value="video" <?php echo (isset($_POST['content_type']) && $_POST['content_type'] == 'video') ? 'selected' : ''; ?>>
-                                            Video
+                                        <option value="photo" <?php echo (isset($_POST['content_type']) && $_POST['content_type'] == 'photo') ? 'selected' : ''; ?>>
+                                            Photo
                                         </option>
                                     </select>
                                 </div>
