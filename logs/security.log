@@ -30,3 +30,11 @@
 [2026-05-20 12:57:00] [SECURITY] Event:INVALID_IMAGE_UPLOAD IP:::1 Details:Admin: 1, MIME: video/mp4, Original: video/mp4
 [2026-05-20 13:00:49] [SECURITY] Event:INVALID_IMAGE_UPLOAD IP:::1 Details:Admin: 1, MIME: video/mp4, Original: video/mp4
 [2026-05-20 13:02:31] [SECURITY] Event:INVALID_IMAGE_UPLOAD IP:::1 Details:Admin: 1, MIME: video/mp4, Original: video/mp4
+[2026-05-27 15:00:14] [SECURITY] Event:INVALID_PROFILE_PHOTO_UPLOAD IP:::1 Details:User: 1, MIME: image/webp
+[2026-05-27 15:00:25] [SECURITY] Event:INVALID_PROFILE_PHOTO_UPLOAD IP:::1 Details:User: 1, MIME: image/webp
+[2026-05-27 15:07:05] [SECURITY] Event:INVALID_PROFILE_PHOTO_UPLOAD IP:::1 Details:User: 1, MIME: image/webp
+[2026-05-27 15:07:23] [SECURITY] Event:INVALID_PROFILE_PHOTO_UPLOAD IP:::1 Details:User: 1, MIME: image/webp
+[2026-05-27 15:13:42] [SECURITY] Event:INVALID_PROFILE_PHOTO_UPLOAD IP:::1 Details:User: 1, MIME: image/webp
+[2026-05-28 02:25:40] [SECURITY] Event:INVALID_PROFILE_PHOTO_UPLOAD IP:::1 Details:User: 1, MIME: image/webp
+[2026-05-28 02:25:46] [SECURITY] Event:INVALID_PROFILE_PHOTO_UPLOAD IP:::1 Details:User: 1, MIME: image/webp
+[2026-05-28 02:32:52] [SECURITY] Event:INVALID_PROFILE_PHOTO_UPLOAD IP:::1 Details:User: 1, MIME: image/webp
