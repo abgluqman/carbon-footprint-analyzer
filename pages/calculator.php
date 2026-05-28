@@ -330,11 +330,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                 <!-- Paper -->
                                 <div class="col-md-6 mb-3">
                                     <label for="paper_pages" class="form-label">
-                                        <i class="bi bi-file-earmark-text text-primary"></i> Paper (Pages)
+                                        <i class="bi bi-file-earmark-text text-primary"></i> Paper (Kg)
                                     </label>
                                     <input type="number" class="form-control" id="paper_pages" 
                                            name="paper_pages" min="0" 
-                                           placeholder="Enter pages printed">
+                                           placeholder="Enter amount in Kg printed">
                                 </div>
                                 
                                 <!-- Food -->

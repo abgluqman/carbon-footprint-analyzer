@@ -11,26 +11,26 @@ if (!function_exists('logError')) {
 // Emission factors (kg CO2 per unit)
 class EmissionFactors {
     // Electricity: kg CO2 per kWh
-    const ELECTRICITY = 0.67;
+    const ELECTRICITY = 0.199;
     
     // Fuel: kg CO2 per liter
-    const PETROL = 2.31;
-    const DIESEL = 2.68;
+    const PETROL = 2.34502;
+    const DIESEL = 2.51206;
     
     // Water: kg CO2 per liter (treatment and distribution)
-    const WATER = 0.00034;
+    const WATER = 0.708;
     
     // Waste: kg CO2 per kg
-    const WASTE_RECYCLABLE = 0.20;
-    const WASTE_NON_RECYCLABLE = 1.20;
+    const WASTE_RECYCLABLE = 0.021;
+    const WASTE_NON_RECYCLABLE = 0.57;
     
-    // Paper: kg CO2 per page (A4)
-    const PAPER = 0.0055;
+    // Paper: kg CO2 per Kg (A4)
+    const PAPER = 1.000;
     
     // Food: kg CO2 per meal
-    const FOOD_MEAT = 5.0;
-    const FOOD_VEGETARIAN = 0.38;
-    const FOOD_VEGAN = 0.28;
+    const FOOD_MEAT = 3.3;
+    const FOOD_VEGETARIAN = 1.7;
+    const FOOD_VEGAN = 1.5;
 }
 
 function calculateElectricityEmissions($kwh) {
