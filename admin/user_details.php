@@ -12,7 +12,7 @@ if ($userId == 0) {
     exit();
 }
 
-// Get user information
+// Get user information - ✅ ADDED: Include profile_photo
 $sql = "SELECT * FROM user WHERE user_id = ?";
 $stmt = $conn->prepare($sql);
 $stmt->bind_param("i", $userId);
@@ -79,7 +79,7 @@ while ($row = $categoryBreakdown->fetch_assoc()) {
 }
 
 // Get recent emission records
-$sql = "SELECT record_id, record_date, total_carbon_emissions
+$sql = "SELECT record_id, record_date, total_carbon_emissions, period
         FROM emissions_record
         WHERE user_id = ?
         ORDER BY record_date DESC
@@ -121,6 +121,31 @@ while ($row = $monthlyTrend->fetch_assoc()) {
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link href="../assets/css/custom.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        /* ✅ ADDED: Profile photo styles */
+        .profile-photo-admin {
+            width: 120px;
+            height: 120px;
+            object-fit: cover;
+            border-radius: 50%;
+            border: 4px solid #198754;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .default-avatar-admin {
+            width: 120px;
+            height: 120px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 2.5rem;
+            font-weight: bold;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+    </style>
 </head>
 <body>
     <?php include 'includes/navigation.php'; ?>
@@ -136,42 +161,62 @@ while ($row = $monthlyTrend->fetch_assoc()) {
         
         <!-- User Info Card -->
         <div class="row g-3 mb-4">
+            <!-- ✅ UPDATED: User card with profile photo -->
             <div class="col-lg-4">
                 <div class="card border-0 shadow-sm h-100">
                     <div class="card-body">
+                        <!-- ✅ ADDED: Profile photo display -->
+                        <div class="text-center mb-4">
+                            <?php if (!empty($user['profile_photo'])): ?>
+                                <img src="data:image/jpeg;base64,<?php echo base64_encode($user['profile_photo']); ?>" 
+                                     alt="<?php echo htmlspecialchars($user['name']); ?> Profile Photo" 
+                                     class="profile-photo-admin">
+                            <?php else: ?>
+                                <div class="default-avatar-admin mx-auto">
+                                    <?php echo strtoupper(substr($user['name'], 0, 1)); ?>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                        
                         <div class="text-center mb-3">
-                            <div class="bg-primary bg-opacity-10 d-inline-flex p-4 rounded-circle mb-3">
-                                <i class="bi bi-person-fill text-primary" style="font-size: 3rem;"></i>
-                            </div>
                             <h4 class="mb-1"><?php echo htmlspecialchars($user['name']); ?></h4>
                             <p class="text-muted mb-0"><?php echo htmlspecialchars($user['email']); ?></p>
                         </div>
                         
+                        <!-- ✅ ADDED: Phone number display -->
                         <hr>
                         
                         <div class="mb-3">
-                            <small class="text-muted">Department</small>
+                            <small class="text-muted d-block">Phone</small>
+                            <p class="mb-0">
+                                <i class="bi bi-telephone"></i>
+                                <strong><?php echo htmlspecialchars($user['phone'] ?? 'N/A'); ?></strong>
+                            </p>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <small class="text-muted d-block">Department</small>
                             <p class="mb-0"><strong><?php echo htmlspecialchars($user['department']); ?></strong></p>
                         </div>
                         
                         <div class="mb-3">
-                            <small class="text-muted">User ID</small>
+                            <small class="text-muted d-block">User ID</small>
                             <p class="mb-0"><strong>#<?php echo $user['user_id']; ?></strong></p>
                         </div>
                         
                         <div class="mb-3">
-                            <small class="text-muted">Joined</small>
+                            <small class="text-muted d-block">Joined</small>
                             <p class="mb-0"><strong><?php echo date('d M Y', strtotime($user['created_at'])); ?></strong></p>
                         </div>
                         
                         <?php if ($stats['first_record']): ?>
                         <div class="mb-3">
-                            <small class="text-muted">First Record</small>
+                            <small class="text-muted d-block">First Record</small>
                             <p class="mb-0"><strong><?php echo date('d M Y', strtotime($stats['first_record'])); ?></strong></p>
                         </div>
                         
                         <div>
-                            <small class="text-muted">Last Activity</small>
+                            <small class="text-muted d-block">Last Activity</small>
                             <p class="mb-0"><strong><?php echo date('d M Y', strtotime($stats['last_record'])); ?></strong></p>
                         </div>
                         <?php endif; ?>
@@ -187,7 +232,9 @@ while ($row = $monthlyTrend->fetch_assoc()) {
                             <div class="card-body">
                                 <div class="d-flex justify-content-between align-items-start">
                                     <div>
-                                        <h6 class="text-muted mb-2">Total Records</h6>
+                                        <h6 class="text-muted mb-2">
+                                            <i class="bi bi-journal-text"></i> Total Records
+                                        </h6>
                                         <h2 class="mb-0"><?php echo number_format($stats['total_records']); ?></h2>
                                         <small class="text-muted">Emissions logged</small>
                                     </div>
@@ -204,9 +251,11 @@ while ($row = $monthlyTrend->fetch_assoc()) {
                             <div class="card-body">
                                 <div class="d-flex justify-content-between align-items-start">
                                     <div>
-                                        <h6 class="text-muted mb-2">Total Emissions</h6>
+                                        <h6 class="text-muted mb-2">
+                                            <i class="bi bi-cloud"></i> Total Emissions
+                                        </h6>
                                         <h2 class="mb-0"><?php echo number_format($stats['total_emissions'], 2); ?></h2>
-                                        <small class="text-muted">kg CO₂</small>
+                                        <small class="text-muted">kg CO<sub>2</sub></small>
                                     </div>
                                     <div class="bg-danger bg-opacity-10 p-3 rounded">
                                         <i class="bi bi-cloud text-danger fs-3"></i>
@@ -223,9 +272,11 @@ while ($row = $monthlyTrend->fetch_assoc()) {
                             <div class="card-body">
                                 <div class="d-flex justify-content-between align-items-start">
                                     <div>
-                                        <h6 class="text-muted mb-2">Average per Record</h6>
+                                        <h6 class="text-muted mb-2">
+                                            <i class="bi bi-bar-chart"></i> Average per Record
+                                        </h6>
                                         <h2 class="mb-0"><?php echo number_format($stats['avg_emissions'], 2); ?></h2>
-                                        <small class="text-muted">kg CO₂</small>
+                                        <small class="text-muted">kg CO<sub>2</sub></small>
                                     </div>
                                     <div class="bg-warning bg-opacity-10 p-3 rounded">
                                         <i class="bi bi-bar-chart text-warning fs-3"></i>
@@ -238,16 +289,18 @@ while ($row = $monthlyTrend->fetch_assoc()) {
                     <div class="col-md-6">
                         <div class="card border-0 shadow-sm">
                             <div class="card-body">
-                                <h6 class="text-muted mb-3">Emission Levels</h6>
-                                <div class="d-flex justify-content-between mb-2">
+                                <h6 class="text-muted mb-3">
+                                    <i class="bi bi-diagram-3"></i> Emission Levels
+                                </h6>
+                                <div class="d-flex justify-content-between mb-2 align-items-center">
                                     <span class="badge bg-success">Low</span>
                                     <strong><?php echo $levelData['Low']; ?></strong>
                                 </div>
-                                <div class="d-flex justify-content-between mb-2">
+                                <div class="d-flex justify-content-between mb-2 align-items-center">
                                     <span class="badge bg-warning">Medium</span>
                                     <strong><?php echo $levelData['Medium']; ?></strong>
                                 </div>
-                                <div class="d-flex justify-content-between">
+                                <div class="d-flex justify-content-between align-items-center">
                                     <span class="badge bg-danger">High</span>
                                     <strong><?php echo $levelData['High']; ?></strong>
                                 </div>
@@ -264,7 +317,7 @@ while ($row = $monthlyTrend->fetch_assoc()) {
             <div class="col-lg-8">
                 <div class="card border-0 shadow-sm">
                     <div class="card-header bg-white">
-                        <h5 class="mb-0"><i class="bi bi-graph-up"></i> Emissions Trend</h5>
+                        <h5 class="mb-0"><i class="bi bi-graph-up"></i> Emissions Trend (Last 6 Months)</h5>
                     </div>
                     <div class="card-body">
                         <canvas id="trendChart" height="80"></canvas>
@@ -298,26 +351,36 @@ while ($row = $monthlyTrend->fetch_assoc()) {
                             <tr>
                                 <th>Record ID</th>
                                 <th>Date</th>
+                                <!-- ✅ ADDED: Period type column -->
+                                <th>Period</th>
                                 <th class="text-end">Emissions</th>
                                 <th class="text-center">Level</th>
-                                
                             </tr>
                         </thead>
                         <tbody>
                             <?php while ($record = $recentRecords->fetch_assoc()): 
-                                $level = getEmissionLevel($record['total_carbon_emissions']);
+                                $recordPeriod = $record['period'] ?? 'daily';
+                                $level = getEmissionLevel($record['total_carbon_emissions'], $recordPeriod);
                                 $levelClass = $level == 'Low' ? 'success' : ($level == 'Medium' ? 'warning' : 'danger');
                             ?>
                             <tr>
-                                <td>#<?php echo $record['record_id']; ?></td>
+                                <td>
+                                    <strong>#<?php echo $record['record_id']; ?></strong>
+                                </td>
                                 <td><?php echo date('d M Y', strtotime($record['record_date'])); ?></td>
+                                <!-- ✅ ADDED: Period badge -->
+                                <td>
+                                    <span class="badge bg-secondary">
+                                        <i class="bi bi-calendar-<?php echo $recordPeriod == 'daily' ? 'day' : ($recordPeriod == 'weekly' ? 'week' : '3'); ?>"></i>
+                                        <?php echo ucfirst($recordPeriod); ?>
+                                    </span>
+                                </td>
                                 <td class="text-end">
-                                    <strong><?php echo number_format($record['total_carbon_emissions'], 2); ?></strong> kg CO₂
+                                    <strong><?php echo number_format($record['total_carbon_emissions'], 2); ?></strong> kg CO<sub>2</sub>
                                 </td>
                                 <td class="text-center">
                                     <span class="badge bg-<?php echo $levelClass; ?>"><?php echo $level; ?></span>
                                 </td>
-                                
                             </tr>
                             <?php endwhile; ?>
                         </tbody>
@@ -325,7 +388,7 @@ while ($row = $monthlyTrend->fetch_assoc()) {
                 </div>
                 <?php else: ?>
                 <div class="text-center py-5">
-                    <i class="bi bi-inbox fs-1 text-muted"></i>
+                    <i class="bi bi-inbox" style="font-size: 2rem; color: #ccc;"></i>
                     <p class="text-muted mt-3">No emission records yet</p>
                 </div>
                 <?php endif; ?>
@@ -348,17 +411,33 @@ while ($row = $monthlyTrend->fetch_assoc()) {
                     borderColor: 'rgb(75, 192, 192)',
                     backgroundColor: 'rgba(75, 192, 192, 0.1)',
                     tension: 0.4,
-                    fill: true
+                    fill: true,
+                    pointBackgroundColor: 'rgb(75, 192, 192)',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointRadius: 5
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: true,
                 plugins: {
-                    legend: { display: false }
+                    legend: { display: true, position: 'top' }
                 },
                 scales: {
-                    y: { beginAtZero: true }
+                    y: { 
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'kg CO₂'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Month'
+                        }
+                    }
                 }
             }
         });
@@ -378,7 +457,16 @@ while ($row = $monthlyTrend->fetch_assoc()) {
                         'rgba(75, 192, 192, 0.8)',
                         'rgba(153, 102, 255, 0.8)',
                         'rgba(255, 159, 64, 0.8)'
-                    ]
+                    ],
+                    borderColor: [
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(153, 102, 255, 1)',
+                        'rgba(255, 159, 64, 1)'
+                    ],
+                    borderWidth: 2
                 }]
             },
             options: {
