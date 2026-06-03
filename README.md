@@ -130,25 +130,18 @@ define('EMISSION_ELECTRICITY', 0.5);
 // Application settings
 define('APP_NAME', 'Carbon Footprint Analyzer');
 define('TIMEZONE', 'UTC');
-define('CURRENCY', 'USD');
 ```
 
 ## Database Schema
 
 Key tables:
-- `users` - User accounts
-- `activities` - Logged activities
-- `emission_factors` - Carbon emission coefficients
-- `reports` - Generated reports
-
-## API Endpoints
-
-The application provides RESTful API endpoints for integration:
-
-- `POST /api/calculate.php` - Calculate carbon emissions
-- `POST /api/activities.php` - Log a new activity
-- `GET /api/activities.php` - Retrieve activities
-- `GET /api/analytics.php` - Get analytics data
+- `users` 
+- `admin` 
+- `educational_content`
+- `emissions_category`
+- emissions_details`
+- `emissions_record` 
+- `report` 
 
 ## Development
 
@@ -179,17 +172,7 @@ code .
 3. Check responsive design on different screen sizes
 4. Test all interactive charts and filters
 
-## Contributing
-
-Contributions are welcome! Please follow these steps:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## Browser Compatibility
+## Browser Compatibility (all devices type)
 
 - Google Chrome (recommended)
 - Firefox
@@ -208,23 +191,5 @@ For issues, questions, or suggestions:
 - Check our [Documentation](./docs)
 - Contact us via email or discussions
 
-## Roadmap
-
-- [ ] User authentication and profiles
-- [ ] Advanced analytics and predictions
-- [ ] Community challenges and gamification
-- [ ] Real-time sustainability impact dashboard
-- [ ] Carbon offset marketplace integration
-- [ ] Mobile app version
-- [ ] Email notifications and reminders
-
-## Acknowledgments
-
-- Environmental data sources: EPA, IPCC
-- Chart.js for interactive visualizations
-- Bootstrap for responsive UI
-- Community contributors and maintainers
-
----
 
 **Let's work together to reduce our carbon footprint and build a sustainable future!** 🌍♻️
